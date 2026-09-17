@@ -134,7 +134,7 @@
     </div>
   </div>
 
-  <!-- BAN/承認待ち画面 -->
+  <!-- BAN画面（BANされた人のみ） -->
   <div id="banOverlay">
     <div class="ban-msg" id="banOverlayMsg">アクセスが拒否されました</div>
     <div class="ban-sub" id="banOverlaySub"></div>
@@ -144,7 +144,7 @@
   </div>
 
   <!-- ログイン画面 -->
-  <div id="loginView">
+  <div id="loginView" class="hidden">
     <div class="bg-white border border-gray-300 rounded-lg shadow p-8 max-w-md mx-auto mt-16 text-center">
       <h1 class="text-3xl font-bold text-red-900 mb-2">シクナイちゃんねる</h1>
       <p class="text-sm text-gray-600 mb-6">ご利用にはGoogleアカウントでのログインが必要です。</p>
@@ -163,14 +163,24 @@
       <p class="text-xs text-amber-700 mt-2 bg-amber-50 border border-amber-200 rounded p-2">
         ⚠️ 初回ログイン時は管理者の承認が必要です
       </p>
-      <!-- ★ ログイン済みの場合に表示される「本サイトへ」ボタン -->
-      <div id="goMainWrap" class="hidden mt-4 pt-4 border-t border-gray-200">
-        <p class="text-xs text-gray-500 mb-2">すでにログイン済みです</p>
-        <button id="goMainBtn"
-          class="bg-red-800 hover:bg-red-900 text-white text-sm font-bold py-2 px-6 rounded shadow-sm w-full">
-          本サイトへ進む
-        </button>
-      </div>
+    </div>
+  </div>
+
+  <!-- ★ 承認待ちメッセージ（ログイン画面の上に重ねて表示） -->
+  <div id="pendingView" class="hidden">
+    <div class="bg-amber-50 border-2 border-amber-400 rounded-lg shadow p-8 max-w-md mx-auto mt-16 text-center">
+      <h1 class="text-2xl font-bold text-amber-900 mb-3">⏳ 承認待ちです</h1>
+      <p class="text-sm text-gray-700 mb-4">
+        管理者または主による承認をお待ちください。<br>
+        承認されたら、自動的に本サイトへ移動します。
+      </p>
+      <p class="text-xs text-gray-500 mb-4">
+        このページを開いたままお待ちください。
+      </p>
+      <button id="retryBtn"
+        class="bg-amber-600 hover:bg-amber-700 text-white text-xs py-2 px-4 rounded transition">
+        今すぐ再確認
+      </button>
     </div>
   </div>
 
@@ -214,6 +224,7 @@
       "roblox.2026.20th@gmail.com"
     ];
 
+    // ★ 本サイトURL
     const MAIN_SITE_URL = 'https://7chanel.noel-k27.workers.dev';
 
     let currentUser = null;
@@ -225,15 +236,15 @@
     let intentionalSignOut = false;
     let initialAuthCheckDone = false;
     let redirecting = false;
+    let approvalChecked = false;
 
     const loginView = document.getElementById('loginView');
+    const pendingView = document.getElementById('pendingView');
     const banOverlay = document.getElementById('banOverlay');
     const banOverlayMsg = document.getElementById('banOverlayMsg');
     const banOverlaySub = document.getElementById('banOverlaySub');
     const banOverlayActions = document.getElementById('banOverlayActions');
     const bootOverlay = document.getElementById('bootOverlay');
-    const goMainWrap = document.getElementById('goMainWrap');
-    const goMainBtn = document.getElementById('goMainBtn');
 
     function hideBootOverlay() {
       bootOverlay.classList.add('hidden');
@@ -285,46 +296,13 @@
       return null;
     }
 
-    function forceExit(msg, sub, showSwitchButton) {
-      banOverlayMsg.textContent = msg || 'アクセスが拒否されました';
-      banOverlaySub.innerHTML = sub || '';
-      if (showSwitchButton) {
-        banOverlayActions.style.display = 'flex';
-      } else {
-        banOverlayActions.style.display = 'none';
-      }
+    // ★ BANされた人のみ黒画面
+    function executeBan() {
+      banOverlayMsg.textContent = 'アクセスが拒否されました';
+      banOverlaySub.innerHTML = 'このアカウントはBANされています。<br>別のGoogleアカウントでログインしてください。';
+      banOverlayActions.style.display = 'flex';
       banOverlay.classList.add('show');
       document.body.style.background = '#000';
-      try { window.open('', '_self').close(); } catch (e) {}
-      try { window.close(); } catch (e) {}
-      setTimeout(() => {
-        try { window.location.replace('about:blank'); } catch (e) {}
-      }, 200);
-      setInterval(() => {
-        try { window.open('', '_self').close(); } catch (e) {}
-        try { window.close(); } catch (e) {}
-      }, 800);
-      setInterval(() => {
-        banOverlay.classList.add('show');
-        document.body.style.background = '#000';
-      }, 300);
-    }
-
-    function executeBan() {
-      forceExit(
-        'アクセスが拒否されました',
-        'このアカウントはBANされています。<br>別のGoogleアカウントでログインしてください。',
-        true
-      );
-    }
-
-    function executePending() {
-      forceExit(
-        '承認待ちです',
-        '管理者または主による承認をお待ちください。<br>承認されたら、サイトを開いてください。<br><br>' +
-        '<small style="color:#9ca3af;">このウィンドウは自動的に閉じられます。</small>',
-        true
-      );
     }
 
     function checkSelfBan() {
@@ -389,6 +367,17 @@
       }
     }
 
+    // ★ 画面切り替え
+    function showLogin() {
+      loginView.classList.remove('hidden');
+      pendingView.classList.add('hidden');
+    }
+    function showPending() {
+      loginView.classList.add('hidden');
+      pendingView.classList.remove('hidden');
+    }
+
+    // ★ 本サイトへリダイレクト
     function goToMainSite() {
       if (redirecting) return;
       redirecting = true;
@@ -411,15 +400,16 @@
     function initApprovedListener() {
       onValue(ref(db, 'approvedUsers'), (snap) => {
         approvedCache = snap.exists() ? snap.val() : {};
+        // ★ 承認済みで、まだリダイレクトしていなければ本サイトへ
+        if (approvalChecked && currentUser && checkSelfApproval()) {
+          goToMainSite();
+        }
       }, (err) => console.error(err));
     }
 
     document.getElementById('googleLoginBtn').addEventListener('click', async () => {
       try {
-        // ★ ログインボタンを押したらフラグを立てて、成功時にリダイレクト
-        redirecting = false;
         await signInWithPopup(auth, provider);
-        // onAuthStateChanged内で処理
       } catch (err) {
         console.error("ログインエラー:", err);
         if (err.code !== 'auth/popup-closed-by-user') {
@@ -428,19 +418,30 @@
       }
     });
 
-    // ★ 「本サイトへ進む」ボタン
-    goMainBtn.addEventListener('click', () => {
-      goToMainSite();
+    document.getElementById('retryBtn').addEventListener('click', async () => {
+      if (!currentUser) return;
+      try {
+        const approvedSnap = await get(ref(db, 'approvedUsers'));
+        approvedCache = approvedSnap.exists() ? approvedSnap.val() : {};
+        approvalChecked = true;
+        if (checkSelfApproval()) {
+          goToMainSite();
+        } else {
+          alert('まだ承認されていません。管理者または主の承認をお待ちください。');
+        }
+      } catch (e) {
+        console.warn('再確認エラー:', e.message);
+      }
     });
 
     document.getElementById('switchAccountBtn').addEventListener('click', async () => {
       intentionalSignOut = true;
       redirecting = false;
+      approvalChecked = false;
       try { await signOut(auth); } catch (e) { console.error(e); }
       banOverlay.classList.remove('show');
       document.body.style.background = '';
-      loginView.classList.remove('hidden');
-      goMainWrap.classList.add('hidden');
+      showLogin();
       hideBootOverlay();
       setTimeout(() => {
         intentionalSignOut = false;
@@ -456,7 +457,7 @@
       } catch (err) {
         console.warn('サイレントサインイン失敗:', err.code || err.message);
         hideBootOverlay();
-        loginView.classList.remove('hidden');
+        showLogin();
       } finally {
         initialAuthCheckDone = true;
       }
@@ -471,19 +472,18 @@
 
       currentUser = user;
 
-      // ★ 未ログイン → ログイン画面を表示（about:blankにしない）
+      // ★ 未ログイン → ログイン画面を表示（誰でも入れる）
       if (!user) {
         userRole = null;
-        hideBootOverlay();
-        loginView.classList.remove('hidden');
-        goMainWrap.classList.add('hidden');
         if (!initialAuthCheckDone) {
           trySilentSignIn();
+          return;
         }
+        hideBootOverlay();
+        showLogin();
         return;
       }
 
-      // ★ ログイン済み
       userRole = roleFromEmail(user.email);
       myFingerprint = generateFingerprint();
 
@@ -493,6 +493,7 @@
       initDeviceBansListener();
       initApprovedListener();
 
+      // 承認済みリスト取得
       try {
         const approvedSnap = await get(ref(db, 'approvedUsers'));
         approvedCache = approvedSnap.exists() ? approvedSnap.val() : {};
@@ -500,22 +501,20 @@
         console.warn('承認済みリスト取得スキップ:', e.message);
       }
 
-      // 承認チェック
+      approvalChecked = true;
+
+      // ★ 承認チェック
       if (!checkSelfApproval()) {
-        // 未承認 → 承認申請を送って、承認待ち画面を表示
+        // 未承認 → 承認待ち画面を表示（タブは閉じない）
         await requestApproval();
         hideBootOverlay();
-        loginView.classList.add('hidden');
-        executePending();
+        showPending();
         return;
       }
 
-      // ★ 承認済み → ログイン画面を表示しつつ「本サイトへ進む」ボタンを出す
+      // 承認済み → ユーザー情報登録してメインサイトへ
       await registerMyFingerprint();
-      hideBootOverlay();
-      loginView.classList.remove('hidden');
-      goMainWrap.classList.remove('hidden');
-      // ※ 自動リダイレクトはしない。ユーザーが「本サイトへ進む」を押したら移動。
+      goToMainSite();
     });
 
     // 利用ルール開閉
@@ -540,30 +539,6 @@
     document.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       return false;
-    });
-
-    // F12等検知
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'F12' || e.keyCode === 123) {
-        e.preventDefault();
-        forceExit('警告', '開発者ツールの使用は禁止されています。', false);
-        return false;
-      }
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j')) {
-        e.preventDefault();
-        forceExit('警告', '開発者ツールの使用は禁止されています。', false);
-        return false;
-      }
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'U' || e.key === 'u')) {
-        e.preventDefault();
-        forceExit('警告', 'ソースコードの表示は禁止されています。', false);
-        return false;
-      }
-      if (e.metaKey && e.altKey && (e.key === 'I' || e.key === 'i' || e.key === 'U' || e.key === 'u')) {
-        e.preventDefault();
-        forceExit('警告', '開発者ツールの使用は禁止されています。', false);
-        return false;
-      }
     });
   </script>
 </body>
