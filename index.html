@@ -3,37 +3,47 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>69ch ログイン</title>
+  <title>69ch - ログイン</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='4' width='56' height='56' rx='8' fill='%23d97706'/%3E%3Crect x='8' y='8' width='48' height='48' rx='4' fill='%23f59e0b'/%3E%3Crect x='14' y='18' width='36' height='36' rx='2' fill='%23ffffff' transform='rotate(-4 32 36)'/%3E%3Cpath d='M20 28h24M20 35h24M20 42h16' stroke='%2394a3b8' stroke-width='3' stroke-linecap='round' transform='rotate(-4 32 36)'/%3E%3Ccircle cx='32' cy='14' r='4' fill='%23ef4444'/%3E%3Ccircle cx='31' cy='13' r='1.5' fill='%23fca5a5'/%3E%3C/svg%3E">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .loading-spinner {
-      display: inline-block; width: 1.2rem; height: 1.2rem;
-      border: 3px solid #f3f3f3; border-top: 3px solid #991b1b;
-      border-radius: 50%; animation: spin 1s linear infinite;
-    }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     #statusBanner {
       position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
       text-align: center; padding: 6px; font-size: 12px;
       transition: transform 0.3s; transform: translateY(-100%);
     }
     #statusBanner.show { transform: translateY(0); }
-    .pulse-dot {
-      display: inline-block;
-      width: 10px; height: 10px;
-      background: #10b981;
-      border-radius: 50%;
-      margin-right: 6px;
-      animation: pulse 1.5s infinite;
+    .loading-spinner {
+      display: inline-block; width: 1rem; height: 1rem;
+      border: 2px solid #f3f3f3; border-top: 2px solid #991b1b;
+      border-radius: 50%; animation: spin 1s linear infinite;
     }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.8); }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    #bootOverlay {
+      position: fixed; inset: 0; background: #111827;
+      z-index: 99998; display: flex;
+      align-items: center; justify-content: center;
+      color: #fff; font-family: sans-serif;
+      flex-direction: column; gap: 16px;
+    }
+    #bootOverlay.hidden { display: none; }
+    #bootOverlay .boot-msg { font-size: 14px; color: #9ca3af; }
+    #bootOverlay .boot-spinner {
+      width: 40px; height: 40px;
+      border: 3px solid #374151;
+      border-top-color: #ef4444;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
     }
   </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans p-4 max-w-4xl mx-auto">
+
+  <!-- 起動時ローディング -->
+  <div id="bootOverlay">
+    <div class="boot-spinner"></div>
+    <div class="boot-msg">アカウントを確認しています...</div>
+  </div>
 
   <div id="statusBanner" class="bg-red-600 text-white"></div>
 
@@ -41,9 +51,7 @@
   <div id="loginView">
     <div class="bg-white border border-gray-300 rounded-lg shadow p-8 max-w-md mx-auto mt-16 text-center">
       <h1 class="text-3xl font-bold text-red-900 mb-2">シクナイちゃんねる</h1>
-      <p class="text-sm text-gray-600 mb-2">ログイン専用サイト</p>
       <p class="text-sm text-gray-600 mb-6">ご利用にはGoogleアカウントでのログインが必要です。</p>
-
       <button id="googleLoginBtn"
         class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-3 px-6 rounded shadow-sm flex items-center justify-center gap-3 mx-auto transition w-full">
         <svg width="20" height="20" viewBox="0 0 48 48">
@@ -54,49 +62,41 @@
         </svg>
         Googleでログイン
       </button>
-
-      <p class="text-xs text-amber-700 mt-4 bg-amber-50 border border-amber-200 rounded p-2">
-        ⚠️ 初回ログイン時は管理者・主の承認が必要です
+      <p class="text-xs text-gray-400 mt-4">※ 投稿は匿名で表示されます</p>
+      <p class="text-xs text-amber-700 mt-2 bg-amber-50 border border-amber-200 rounded p-2">
+        ⚠️ 初回ログイン時は管理者の承認が必要です
       </p>
     </div>
   </div>
 
   <!-- 承認待ち画面 -->
   <div id="pendingView" class="hidden">
-    <div class="bg-amber-50 border-2 border-amber-400 rounded-lg shadow p-8 max-w-md mx-auto mt-16 text-center">
+    <div class="bg-white border border-amber-300 rounded-lg shadow p-8 max-w-md mx-auto mt-16 text-center">
       <div class="text-5xl mb-4">⏳</div>
-      <h2 class="text-2xl font-bold text-amber-800 mb-2">承認待ち</h2>
-      <p class="text-sm text-gray-700 mb-4">
-        管理者または主による承認をお待ちください。<br>
-        承認されると、自動的にメインサイトへ移動します。
-      </p>
-      <p class="text-xs text-gray-500 mb-6">
-        <span class="pulse-dot"></span>このページを開いたままにしてください
-      </p>
-      <div class="loading-spinner"></div>
-      <p class="text-xs text-gray-500 mt-2">承認を待機中...</p>
-      <button id="logoutPendingBtn" class="mt-6 text-xs text-gray-500 underline">ログアウト</button>
-    </div>
-  </div>
-
-  <!-- 承認済み画面（自動遷移するので一瞬だけ表示） -->
-  <div id="approvedView" class="hidden">
-    <div class="bg-green-50 border-2 border-green-400 rounded-lg shadow p-8 max-w-md mx-auto mt-16 text-center">
-      <div class="text-5xl mb-4">✅</div>
-      <h2 class="text-2xl font-bold text-green-800 mb-2">承認済み</h2>
-      <p class="text-sm text-gray-700 mb-2">メインサイトへ移動します...</p>
-      <div class="loading-spinner"></div>
-      <a id="goToMainBtn" href="#" class="mt-6 inline-block text-xs text-blue-600 underline">自動で移動しない場合はこちら</a>
+      <h1 class="text-2xl font-bold text-amber-800 mb-3">承認待ちです</h1>
+      <p class="text-sm text-gray-600 mb-2">管理者または主による承認をお待ちください。</p>
+      <p class="text-sm text-gray-600 mb-6">承認されたら、自動で本サイトに入れます。</p>
+      <div class="text-xs text-gray-400">
+        <span class="loading-spinner"></span> 承認を待っています...
+      </div>
+      <div class="mt-6 text-xs text-gray-500">
+        あなたのメール: <span id="pendingEmail" class="font-mono text-red-700"></span>
+      </div>
+      <button id="logoutBtn" class="mt-6 bg-gray-500 hover:bg-gray-600 text-white text-xs py-1.5 px-4 rounded transition shadow">
+        ログアウト
+      </button>
     </div>
   </div>
 
   <!-- BAN画面 -->
   <div id="banView" class="hidden">
-    <div class="bg-black text-white rounded-lg shadow p-8 max-w-md mx-auto mt-16 text-center">
+    <div class="bg-white border border-red-300 rounded-lg shadow p-8 max-w-md mx-auto mt-16 text-center">
       <div class="text-5xl mb-4">🚫</div>
-      <h2 class="text-2xl font-bold mb-2">アクセスが拒否されました</h2>
-      <p class="text-sm text-red-300 mb-6">このアカウントはBANされています。</p>
-      <button id="logoutBanBtn" class="text-xs text-gray-300 underline">別のGoogleアカウントでログイン</button>
+      <h1 class="text-2xl font-bold text-red-800 mb-3">アクセスが拒否されました</h1>
+      <p class="text-sm text-gray-600 mb-6">このアカウントはBANされています。</p>
+      <button id="banLogoutBtn" class="bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 px-6 rounded font-bold">
+        別のGoogleアカウントでログイン
+      </button>
     </div>
   </div>
 
@@ -104,7 +104,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
     import {
-      getDatabase, ref, push, set, remove, onValue, get, update
+      getDatabase, ref, get, set, remove, onValue
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
     import {
       getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
@@ -128,7 +128,9 @@
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
-    setPersistence(auth, browserLocalPersistence).catch(() => {});
+    setPersistence(auth, browserLocalPersistence).catch((err) => {
+      console.warn('永続化設定失敗:', err);
+    });
 
     const ROLE_ADMIN_EMAIL = "katou.noel114514@gmail.com";
     const ROLE_OWNER_EMAIL = "18107@v.nakijin.ed.jp";
@@ -139,28 +141,24 @@
     ];
 
     // ★ 本サイトのURL
-    const MAIN_SITE_URL = "https://7chanel.noel-k27.workers.dev/";
+    const INDEX_URL = 'index.html';
 
     let currentUser = null;
-    let pendingUnsubscribe = null;
-    let approvedUnsubscribe = null;
-    let bansUnsubscribe = null;
-    let knownUsersUnsubscribe = null;
-
-    let pendingCache = {};
-    let approvedCache = {};
-    let bansCache = {};
-    let knownUsersCache = {};
-
+    let userRole = null;
+    let myFingerprint = null;
+    let myEmailVisible = true;
+    let myBadgePublic = true;
     let intentionalSignOut = false;
-    let redirectTimer = null;
+    let redirectingToMain = false;   // ★ ループ防止
+    let approvalWatchUnsubscribe = null;
+    let banWatchUnsubscribe = null;
 
     const loginView = document.getElementById('loginView');
     const pendingView = document.getElementById('pendingView');
-    const approvedView = document.getElementById('approvedView');
     const banView = document.getElementById('banView');
+    const pendingEmail = document.getElementById('pendingEmail');
+    const bootOverlay = document.getElementById('bootOverlay');
     const statusBanner = document.getElementById('statusBanner');
-    const goToMainBtn = document.getElementById('goToMainBtn');
     let bannerTimer = null;
 
     function showBanner(msg, isError = true) {
@@ -173,18 +171,40 @@
       }, 4000);
     }
 
-    function showOnly(view) {
-      [loginView, pendingView, approvedView, banView].forEach(v => {
-        if (v === view) v.classList.remove('hidden');
-        else v.classList.add('hidden');
-      });
+    function hideBoot() {
+      bootOverlay.classList.add('hidden');
     }
 
-    function roleFromEmail(email) {
-      if (email === ROLE_ADMIN_EMAIL) return 'admin';
-      if (email === ROLE_OWNER_EMAIL) return 'owner';
-      if (ROLE_VIP_EMAILS.includes(email)) return 'vip';
-      return null;
+    function showView(name) {
+      loginView.classList.add('hidden');
+      pendingView.classList.add('hidden');
+      banView.classList.add('hidden');
+      if (name === 'login') loginView.classList.remove('hidden');
+      else if (name === 'pending') pendingView.classList.remove('hidden');
+      else if (name === 'ban') banView.classList.remove('hidden');
+    }
+
+    function generateFingerprint() {
+      const parts = [
+        navigator.userAgent, navigator.language,
+        (navigator.languages || []).join(','),
+        screen.width + 'x' + screen.height,
+        screen.colorDepth, new Date().getTimezoneOffset(),
+        navigator.platform || '', navigator.hardwareConcurrency || '',
+        navigator.deviceMemory || '', navigator.maxTouchPoints || 0
+      ];
+      const raw = parts.join('|');
+      function hash(str) {
+        let h1 = 0x811c9dc5, h2 = 0xcbf29ce4;
+        for (let i = 0; i < str.length; i++) {
+          const c = str.charCodeAt(i);
+          h1 ^= c; h1 = Math.imul(h1, 0x01000193);
+          h2 ^= c; h2 = Math.imul(h2, 0x01000193);
+        }
+        return (h1 >>> 0).toString(16).padStart(8, '0') +
+               (h2 >>> 0).toString(16).padStart(8, '0');
+      }
+      return 'fp_' + hash(raw);
     }
 
     function emailToKey(email) {
@@ -198,172 +218,185 @@
       return 'em_' + (h1 >>> 0).toString(16).padStart(8, '0');
     }
 
-    function isApproved(uid) {
-      return !!approvedCache[uid];
+    function roleFromEmail(email) {
+      if (email === ROLE_ADMIN_EMAIL) return 'admin';
+      if (email === ROLE_OWNER_EMAIL) return 'owner';
+      if (ROLE_VIP_EMAILS.includes(email)) return 'vip';
+      return null;
     }
 
-    function isBanned(uid, email) {
-      if (bansCache[uid]) return true;
-      const ek = emailToKey(email);
-      if (ek && bansCache[ek]) return true;
-      return false;
-    }
-
-    // 既存ユーザーの自動承認
-    async function migrateExistingUser(user) {
-      if (!user) return false;
-      if (approvedCache[user.uid]) return true;
-      // knownUsers に記録があれば既存ユーザー
-      if (knownUsersCache[user.uid]) {
-        try {
-          await set(ref(db, `approvedUsers/${user.uid}`), {
-            email: user.email || '',
-            displayName: user.displayName || '',
-            approvedAt: Date.now(),
-            approvedBy: 'auto-migration'
-          });
-          await remove(ref(db, `pendingUsers/${user.uid}`));
-          console.log('既存ユーザーを自動承認:', user.email);
-          return true;
-        } catch (e) {
-          console.warn('自動承認失敗:', e.message);
-          return false;
-        }
-      }
-      return false;
-    }
-
-    async function requestApproval(user) {
-      if (!user) return;
+    // ★ 本サイトへリダイレクト（ループ防止）
+    function goToMain() {
+      if (redirectingToMain) return;
+      redirectingToMain = true;
       try {
+        window.location.replace(INDEX_URL);
+      } catch (e) {
+        console.error('リダイレクト失敗:', e);
+      }
+    }
+
+    // ★ BANチェック
+    async function checkBanned(user) {
+      try {
+        const snap = await get(ref(db, 'bans'));
+        if (!snap.exists()) return false;
+        const bans = snap.val();
+        if (bans[user.uid]) return true;
+        const ek = emailToKey(user.email);
+        if (ek && bans[ek]) return true;
+        // デバイスBANチェック
+        const devSnap = await get(ref(db, 'deviceBans'));
+        if (devSnap.exists()) {
+          const devBans = devSnap.val();
+          if (myFingerprint && devBans[myFingerprint]) return true;
+        }
+        return false;
+      } catch (e) {
+        console.warn('BANチェックエラー:', e);
+        return false;
+      }
+    }
+
+    // ★ 承認済みチェック
+    async function checkApproved(user, role) {
+      if (role === 'admin' || role === 'owner' || role === 'vip') return true;
+      try {
+        const snap = await get(ref(db, `approvedUsers/${user.uid}`));
+        return snap.exists();
+      } catch (e) {
+        console.warn('承認チェックエラー:', e);
+        return false;
+      }
+    }
+
+    // ★ 承認申請
+    async function requestApproval(user) {
+      try {
+        // 既に承認済みなら何もしない
+        const approvedSnap = await get(ref(db, `approvedUsers/${user.uid}`));
+        if (approvedSnap.exists()) return;
+
         await set(ref(db, `pendingUsers/${user.uid}`), {
           email: user.email || '',
           displayName: user.displayName || '',
-          requestedAt: Date.now()
+          requestedAt: Date.now(),
+          fingerprint: myFingerprint || ''
         });
       } catch (e) {
-        console.warn('承認申請失敗:', e.message);
+        console.warn('承認申請エラー:', e);
       }
     }
 
-    // メインサイトへリダイレクト（1回だけ）
-    function redirectToMain() {
-      if (redirectTimer) return;
-      redirectTimer = setTimeout(() => {
-        window.location.replace(MAIN_SITE_URL);
-      }, 500);
-    }
-
-    function initListeners() {
-      if (pendingUnsubscribe) pendingUnsubscribe();
-      if (approvedUnsubscribe) approvedUnsubscribe();
-      if (bansUnsubscribe) bansUnsubscribe();
-      if (knownUsersUnsubscribe) knownUsersUnsubscribe();
-
-      pendingUnsubscribe = onValue(ref(db, 'pendingUsers'), (snap) => {
-        pendingCache = snap.exists() ? snap.val() : {};
-        updateView();
-      });
-      approvedUnsubscribe = onValue(ref(db, 'approvedUsers'), (snap) => {
-        approvedCache = snap.exists() ? snap.val() : {};
-        updateView();
-      });
-      bansUnsubscribe = onValue(ref(db, 'bans'), (snap) => {
-        bansCache = snap.exists() ? snap.val() : {};
-        updateView();
-      });
-      knownUsersUnsubscribe = onValue(ref(db, 'knownUsers'), (snap) => {
-        knownUsersCache = snap.exists() ? snap.val() : {};
+    // ★ 承認待ち監視（リアルタイム）→ 承認されたら本サイトへ
+    function watchApproval(user) {
+      if (approvalWatchUnsubscribe) approvalWatchUnsubscribe();
+      approvalWatchUnsubscribe = onValue(ref(db, `approvedUsers/${user.uid}`), (snap) => {
+        if (snap.exists()) {
+          showBanner('承認されました！移動します...', false);
+          setTimeout(() => {
+            goToMain();
+          }, 800);
+        }
       });
     }
 
-    async function updateView() {
-      if (!currentUser) {
-        showOnly(loginView);
-        return;
-      }
-
-      const uid = currentUser.uid;
-      const email = currentUser.email;
-      const role = roleFromEmail(email);
-
-      // BANチェック
-      if (isBanned(uid, email)) {
-        showOnly(banView);
-        return;
-      }
-
-      // 管理者・主・VIPは無条件で承認済み
-      if (role === 'admin' || role === 'owner' || role === 'vip') {
-        showOnly(approvedView);
-        goToMainBtn.href = MAIN_SITE_URL;
-        redirectToMain();
-        return;
-      }
-
-      // 承認済み
-      if (isApproved(uid)) {
-        showOnly(approvedView);
-        goToMainBtn.href = MAIN_SITE_URL;
-        redirectToMain();
-        return;
-      }
-
-      // 既存ユーザーなら自動承認を試みる
-      const migrated = await migrateExistingUser(currentUser);
-      if (migrated) {
-        // approvedUsers の更新を待つ（onValueで再帰的にupdateViewが呼ばれる）
-        return;
-      }
-
-      // 承認待ち
-      if (pendingCache[uid]) {
-        showOnly(pendingView);
-        return;
-      }
-
-      // どれでもない → 承認申請
-      await requestApproval(currentUser);
-      showOnly(pendingView);
+    // ★ BAN監視（リアルタイム）→ BANされたらBAN画面へ
+    function watchBan(user) {
+      if (banWatchUnsubscribe) banWatchUnsubscribe();
+      banWatchUnsubscribe = onValue(ref(db, 'bans'), (snap) => {
+        if (!snap.exists()) return;
+        const bans = snap.val();
+        const isBanned = !!bans[user.uid] || (emailToKey(user.email) && bans[emailToKey(user.email)]);
+        if (isBanned) {
+          showView('ban');
+        }
+      });
     }
 
     document.getElementById('googleLoginBtn').addEventListener('click', async () => {
       try {
         await signInWithPopup(auth, provider);
       } catch (err) {
-        console.error('ログインエラー:', err);
+        console.error("ログインエラー:", err);
         if (err.code !== 'auth/popup-closed-by-user') {
-          alert('ログインに失敗しました: ' + (err.message || ''));
+          alert("ログインに失敗しました: " + (err.message || ''));
         }
       }
     });
 
     async function doLogout() {
       intentionalSignOut = true;
-      if (redirectTimer) { clearTimeout(redirectTimer); redirectTimer = null; }
+      if (approvalWatchUnsubscribe) { approvalWatchUnsubscribe(); approvalWatchUnsubscribe = null; }
+      if (banWatchUnsubscribe) { banWatchUnsubscribe(); banWatchUnsubscribe = null; }
       try { await signOut(auth); } catch (e) { console.error(e); }
-      showOnly(loginView);
-      setTimeout(() => { intentionalSignOut = false; }, 500);
+      redirectingToMain = false;
+      showView('login');
+      hideBoot();
+      setTimeout(() => {
+        intentionalSignOut = false;
+      }, 500);
     }
-    document.getElementById('logoutPendingBtn').addEventListener('click', doLogout);
-    document.getElementById('logoutBanBtn').addEventListener('click', doLogout);
+    document.getElementById('logoutBtn').addEventListener('click', doLogout);
+    document.getElementById('banLogoutBtn').addEventListener('click', doLogout);
 
     onAuthStateChanged(auth, async (user) => {
       if (intentionalSignOut) return;
+
       currentUser = user;
+
       if (!user) {
-        showOnly(loginView);
+        myFingerprint = null;
+        userRole = null;
+        showView('login');
+        hideBoot();
         return;
       }
-      initListeners();
-      await updateView();
+
+      userRole = roleFromEmail(user.email);
+      myFingerprint = generateFingerprint();
+
+      // BANチェック
+      const banned = await checkBanned(user);
+      if (banned) {
+        showView('ban');
+        hideBoot();
+        watchBan(user);
+        return;
+      }
+
+      // 承認済みチェック
+      const approved = await checkApproved(user, userRole);
+      if (approved) {
+        // ★ 承認済み or 管理者・主・VIP → 本サイトへ
+        showBanner('ログイン済みです。移動します...', false);
+        setTimeout(() => goToMain(), 300);
+        return;
+      }
+
+      // 未承認 → 申請して承認待ち画面
+      await requestApproval(user);
+      pendingEmail.textContent = user.email || '';
+      showView('pending');
+      hideBoot();
+
+      // 承認待ち & BAN監視
+      watchApproval(user);
+      watchBan(user);
     });
 
+    // 起動時に少し待ってからboot overlayを非表示にする保険
+    setTimeout(() => {
+      if (!currentUser) {
+        // ログイン画面を表示（onAuthStateChangedがまだ呼ばれていない場合）
+        hideBoot();
+        showView('login');
+      }
+    }, 2000);
+
     window.addEventListener('beforeunload', () => {
-      if (pendingUnsubscribe) pendingUnsubscribe();
-      if (approvedUnsubscribe) approvedUnsubscribe();
-      if (bansUnsubscribe) bansUnsubscribe();
-      if (knownUsersUnsubscribe) knownUsersUnsubscribe();
+      if (approvalWatchUnsubscribe) approvalWatchUnsubscribe();
+      if (banWatchUnsubscribe) banWatchUnsubscribe();
     });
   </script>
 </body>
