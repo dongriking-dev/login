@@ -64,6 +64,14 @@
       animation: spin 0.8s linear infinite;
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* ★ ログイン済みカード */
+    #loggedInCard {
+      display: none;
+    }
+    #loggedInCard.show {
+      display: block;
+    }
   </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans p-4 max-w-4xl mx-auto">
@@ -142,7 +150,7 @@
     </div>
   </div>
 
-  <!-- ログイン画面 -->
+  <!-- ★ 未ログイン画面 -->
   <div id="loginView" class="hidden">
     <div class="bg-white border border-gray-300 rounded-lg shadow p-8 max-w-md mx-auto mt-16 text-center">
       <h1 class="text-3xl font-bold text-red-900 mb-2">シクナイちゃんねる</h1>
@@ -161,6 +169,32 @@
       <p class="text-xs text-gray-400 mt-4">※ 投稿は匿名で表示されます</p>
       <p class="text-xs text-amber-700 mt-2 bg-amber-50 border border-amber-200 rounded p-2">
         ⚠️ 初回ログイン時は管理者の承認が必要です
+      </p>
+    </div>
+  </div>
+
+  <!-- ★ ログイン済み画面（承認済みの場合に表示） -->
+  <div id="loggedInCard" class="hidden">
+    <div class="bg-white border border-gray-300 rounded-lg shadow p-8 max-w-md mx-auto mt-16 text-center">
+      <h1 class="text-3xl font-bold text-red-900 mb-2">シクナイちゃんねる</h1>
+      <p class="text-sm text-green-700 font-bold mb-4">✅ ログイン済み</p>
+      <p class="text-sm text-gray-600 mb-2">
+        ようこそ、<br>
+        <span id="loggedInEmail" class="font-mono text-xs text-blue-700"></span>
+      </p>
+      <p class="text-xs text-gray-500 mb-6">
+        下のボタンから本サイトへ進んでください。
+      </p>
+      <button id="goToMainBtn"
+        class="bg-red-800 hover:bg-red-900 text-white font-bold py-3 px-6 rounded shadow-sm flex items-center justify-center gap-3 mx-auto transition w-full">
+        👉 本サイトへ進む
+      </button>
+      <button id="logoutBtn2"
+        class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded shadow-sm flex items-center justify-center gap-3 mx-auto transition w-full mt-3 text-sm">
+        ログアウト
+      </button>
+      <p class="text-xs text-gray-400 mt-4">
+        ※ 投稿は匿名で表示されます
       </p>
     </div>
   </div>
@@ -217,12 +251,11 @@
     let intentionalSignOut = false;
     let initialAuthCheckDone = false;
 
-    // ★ 二重リダイレクト防止
-    let redirecting = false;
-    // ★ 承認確認が完了したかどうか
-    let approvalChecked = false;
-
     const loginView = document.getElementById('loginView');
+    const loggedInCard = document.getElementById('loggedInCard');
+    const loggedInEmail = document.getElementById('loggedInEmail');
+    const goToMainBtn = document.getElementById('goToMainBtn');
+    const logoutBtn2 = document.getElementById('logoutBtn2');
     const banOverlay = document.getElementById('banOverlay');
     const banOverlayMsg = document.getElementById('banOverlayMsg');
     const banOverlaySub = document.getElementById('banOverlaySub');
@@ -315,7 +348,7 @@
     function executePending() {
       forceExit(
         '承認待ちです',
-        '管理者または主による承認をお待ちください。<br>承認されたら、サイトを開いてください。<br><br>' +
+        '管理者または主による承認をお待ちください。<br>承認されたら、このページをリロードしてください。<br><br>' +
         '<small style="color:#9ca3af;">このウィンドウは自動的に閉じられます。</small>',
         true
       );
@@ -383,11 +416,21 @@
       }
     }
 
-    // ★ 本サイトへリダイレクト（承認確認完了後のみ呼ばれる）
-    function goToMainSite() {
-      if (redirecting) return;
-      redirecting = true;
-      window.location.replace(MAIN_SITE_URL);
+    // ★ 画面切り替え
+    function showLoginView() {
+      loginView.classList.remove('hidden');
+      loggedInCard.classList.add('hidden');
+      loggedInCard.classList.remove('show');
+      banOverlay.classList.remove('show');
+      document.body.style.background = '';
+    }
+    function showLoggedInView() {
+      loginView.classList.add('hidden');
+      loggedInCard.classList.remove('hidden');
+      loggedInCard.classList.add('show');
+      loggedInEmail.textContent = currentUser ? currentUser.email : '';
+      banOverlay.classList.remove('show');
+      document.body.style.background = '';
     }
 
     // 監視
@@ -406,9 +449,16 @@
     function initApprovedListener() {
       onValue(ref(db, 'approvedUsers'), (snap) => {
         approvedCache = snap.exists() ? snap.val() : {};
-        // ★ 承認済みで、まだリダイレクトしていなければ本サイトへ
-        if (approvalChecked && currentUser && checkSelfApproval()) {
-          goToMainSite();
+        // ★ 承認されたら自動的にログイン済み画面に切り替え
+        if (currentUser && checkSelfApproval()) {
+          if (!loggedInCard.classList.contains('show') && !loginView.classList.contains('hidden') === false) {
+            // 既にメイン画面 → 何もしない
+          }
+          // ログイン済み画面に切り替える（未ログイン画面だった場合）
+          if (!loginView.classList.contains('hidden')) {
+            // ログイン画面が表示されている＝未承認 → 承認されたので切り替え
+            showLoggedInView();
+          }
         }
       }, (err) => console.error(err));
     }
@@ -424,14 +474,27 @@
       }
     });
 
+    // ★ 本サイトへ進むボタン
+    goToMainBtn.addEventListener('click', () => {
+      window.location.href = MAIN_SITE_URL;
+    });
+
+    // ★ ログイン済み画面のログアウトボタン
+    logoutBtn2.addEventListener('click', async () => {
+      intentionalSignOut = true;
+      try { await signOut(auth); } catch (e) { console.error(e); }
+      setTimeout(() => {
+        intentionalSignOut = false;
+        initialAuthCheckDone = false;
+      }, 500);
+    });
+
     document.getElementById('switchAccountBtn').addEventListener('click', async () => {
       intentionalSignOut = true;
-      redirecting = false;
-      approvalChecked = false;
       try { await signOut(auth); } catch (e) { console.error(e); }
       banOverlay.classList.remove('show');
       document.body.style.background = '';
-      loginView.classList.remove('hidden');
+      showLoginView();
       hideBootOverlay();
       setTimeout(() => {
         intentionalSignOut = false;
@@ -447,7 +510,7 @@
       } catch (err) {
         console.warn('サイレントサインイン失敗:', err.code || err.message);
         hideBootOverlay();
-        loginView.classList.remove('hidden');
+        showLoginView();
       } finally {
         initialAuthCheckDone = true;
       }
@@ -462,6 +525,7 @@
 
       currentUser = user;
 
+      // 未ログイン → ログイン画面
       if (!user) {
         userRole = null;
         if (!initialAuthCheckDone) {
@@ -469,7 +533,7 @@
           return;
         }
         hideBootOverlay();
-        loginView.classList.remove('hidden');
+        showLoginView();
         return;
       }
 
@@ -482,16 +546,13 @@
       initDeviceBansListener();
       initApprovedListener();
 
-      // ★ 承認済みリストを確実に取得
+      // 承認済みリストを取得
       try {
         const approvedSnap = await get(ref(db, 'approvedUsers'));
         approvedCache = approvedSnap.exists() ? approvedSnap.val() : {};
       } catch (e) {
         console.warn('承認済みリスト取得スキップ:', e.message);
       }
-
-      // ★ 承認確認が完了したのでフラグを立てる
-      approvalChecked = true;
 
       // 承認チェック
       if (!checkSelfApproval()) {
@@ -500,9 +561,10 @@
         return;
       }
 
-      // 承認済み → ユーザー情報登録してメインサイトへ
+      // ★ 承認済み → ユーザー情報登録してログイン済み画面を表示
       await registerMyFingerprint();
-      goToMainSite();
+      hideBootOverlay();
+      showLoggedInView();
     });
 
     // 利用ルール開閉
