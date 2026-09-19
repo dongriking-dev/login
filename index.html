@@ -135,7 +135,6 @@
     }
     .publish-btn.unpublished:hover { background: #15803d; }
 
-    /* 緊急ロックダウンボタン */
     .lockdown-btn {
       background: #7f1d1d; color: #fff; font-size: 11px; padding: 6px 14px;
       border-radius: 4px; cursor: pointer; border: 2px solid #fbbf24;
@@ -153,7 +152,6 @@
       50% { box-shadow: 0 0 0 6px rgba(251,191,36,0); }
     }
 
-    /* 手動警報ボタン */
     .alarm-btn {
       background: #b91c1c; color: #fff; font-size: 11px; padding: 6px 14px;
       border-radius: 4px; cursor: pointer; border: 2px solid #fde047;
@@ -1310,7 +1308,6 @@
       }
     }
 
-    // ===== 手動警報のDiscord通知 =====
     async function sendDiscordAlarmNotification(reason, byEmail) {
       if (!DISCORD_WEBHOOK_URL) return;
       try {
@@ -1372,7 +1369,6 @@
     let knownUsersCache = {};
     let pendingCache = {};
     let approvedCache = {};
-    // lockdown / alarm を含む
     let siteStatusCache = { published: true, messageUrl: '', lockdown: false, alarm: false, alarmReason: '', alarmBy: '' };
     let myFingerprint = null;
     let nicknamesCache = {};
@@ -1392,7 +1388,6 @@
 
     let badgeFeaturePermissions = {};
 
-    // ===== ロックダウン中の連続監視用 =====
     let lockdownEnforcerInterval = null;
 
     const loginView = document.getElementById('loginView');
@@ -1434,12 +1429,26 @@
       if (userRole === 'admin' || userRole === 'owner') return true;
       return canDo('canBackup');
     }
+
+    /**
+     * 投稿のメールアドレスを「実際に表示するか」
+     * → myEmailVisible も考慮する
+     */
     function canViewEmail() {
-      if (userRole !== 'admin' && userRole !== 'owner') {
-        if (!canDo('canViewEmail')) return false;
-      }
+      if (!canToggleEmailVisibility()) return false;
       return myEmailVisible === true;
     }
+
+    /**
+     * 「メールアドレスを表示」トグルの表示可否
+     * → 役割・権限のみで判定（myEmailVisible は見ない）
+     *   admin/owner は常に表示、それ以外は canViewEmail 権限を持つ場合のみ
+     */
+    function canToggleEmailVisibility() {
+      if (userRole === 'admin' || userRole === 'owner') return true;
+      return canDo('canViewEmail');
+    }
+
     function canManageBadge() {
       if (userRole === 'admin' || userRole === 'owner') return true;
       return canDo('canManageBadge');
@@ -1722,7 +1731,6 @@
       return false;
     }
 
-    // ===== 手動警報の表示制御（右上トースト） =====
     function showAlarmToast() {
       if (!siteStatusCache || siteStatusCache.alarm !== true) {
         alarmToast.classList.remove('show');
@@ -1736,7 +1744,6 @@
       alarmToast.classList.remove('show');
     }
     function checkAndApplyAlarm() {
-      // 管理者・主は影響を受けない
       if (isCurrentUserProtected()) {
         hideAlarmToast();
         return false;
@@ -1957,7 +1964,6 @@
       });
     })();
 
-    // ===== 右クリック・選択・ドラッグ禁止（静かに防止、警報なし） =====
     document.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       return false;
@@ -1995,6 +2001,8 @@
         updateAdminControlsVisibility();
         updateBoardEditability();
         updateMyBadgeToggleVisibility();
+        // バッジ機能で canViewEmail が変わる可能性があるのでトグルも更新
+        updateEmailToggleVisibility();
       }, (err) => {
         console.error('バッジ機能権限監視エラー:', err);
       });
@@ -2023,6 +2031,23 @@
         badgeToggle.checked = myBadgePublic;
       } else {
         badgeToggleWrap.classList.add('hidden');
+      }
+    }
+
+    /**
+     * 「メールアドレスを表示」トグルの表示/非表示を更新
+     * → 役割・権限ベース（myEmailVisible は見ない）
+     */
+    function updateEmailToggleVisibility() {
+      if (!currentUser) {
+        emailToggleWrap.classList.add('hidden');
+        return;
+      }
+      if (canToggleEmailVisibility()) {
+        emailToggleWrap.classList.remove('hidden');
+        emailToggle.checked = myEmailVisible;
+      } else {
+        emailToggleWrap.classList.add('hidden');
       }
     }
 
@@ -2128,13 +2153,11 @@
       }
     }
 
-    // ===== 手動警報 モーダルを開く =====
     window.openAlarmModal = function() {
       if (!canAlarm()) {
         alert('この操作は管理者または主のみ可能です。');
         return;
       }
-      // すでに警報中なら解除確認
       if (siteStatusCache.alarm === true) {
         if (!confirm('🚨 警報を解除しますか？\n\n全ユーザーの警報トーストが消えます。')) return;
         releaseAlarm();
@@ -2183,7 +2206,6 @@
         closeAlarmModal();
         showBanner('🚨 手動警報を発令しました', false);
 
-        // Discord通知
         sendDiscordAlarmNotification(reason || '緊急対応', currentUser ? currentUser.email : '管理者');
       } catch (err) {
         console.error('警報発令エラー:', err);
@@ -2192,7 +2214,6 @@
       }
     });
 
-    // ===== 手動警報 解除 =====
     async function releaseAlarm() {
       if (!canAlarm()) { alert('この操作は管理者または主のみ可能です。'); return; }
       try {
@@ -2477,12 +2498,10 @@
         updateAlarmBtnUI();
         updatePublishModalUI();
 
-        // ===== ロックダウンチェック（最優先） =====
         if (checkAndApplyLockdown()) {
           return;
         }
 
-        // ===== 手動警報チェック（トースト表示） =====
         checkAndApplyAlarm();
 
         if (isCurrentUserProtected()) {
@@ -2664,7 +2683,6 @@
 
       if (!user) {
         userRole = null;
-        // 未ログイン時もサイトステータスを監視してロックダウン・警報を判定
         initSiteStatusListener();
 
         if (!initialAuthCheckDone) {
@@ -2689,7 +2707,6 @@
       initSiteStatusListener();
       initBadgeFeatureListener();
 
-      // siteStatusの初期値を取得してロックダウン・警報を反映
       try {
         const initSiteSnap = await get(ref(db, 'siteStatus'));
         const initVal = initSiteSnap.exists() ? initSiteSnap.val() : { published: true, messageUrl: '', lockdown: false, alarm: false };
@@ -2749,12 +2766,8 @@
 
       updateMyBadgeToggleVisibility();
 
-      if (canViewEmail()) {
-        emailToggleWrap.classList.remove('hidden');
-        emailToggle.checked = myEmailVisible;
-      } else {
-        emailToggleWrap.classList.add('hidden');
-      }
+      // ★ 修正: 役割・権限ベースでトグルを表示
+      updateEmailToggleVisibility();
 
       renderRoleBadge(userRole);
 
