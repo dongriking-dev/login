@@ -677,6 +677,7 @@
           <ul class="list-disc list-inside ml-4 mt-1 space-y-1 text-gray-700">
             <li>他の利用者への誹謗中傷・脅迫・嫌がらせ</li>
             <li>荒らし行為（連投・意味のない投稿の繰り返し）</li>
+            <li>ネットミーム・有名なことなどの個人情報公開は許可しますが、限度が行きすぎている場合は削除いたします。</li>
           </ul>
         </li>
         <li><strong class="text-red-900">投稿内容の責任</strong><br>投稿内容は投稿者自身の責任です。運営は投稿内容について一切の責任を負いません。</li>
@@ -4180,6 +4181,104 @@
     window.addEventListener('unhandledrejection', (event) => {
       console.error('未処理のPromiseエラー:', event.reason);
     });
+
+    /* ===================================================
+ *  総合セキュリティ＆検証ツール妨害スクリプト
+ *  (最下部に追加するだけで自動実行されます)
+ * =================================================== */
+(() => {
+  'use strict';
+
+  // --- 1. 右クリックおよびショートカットキーの禁止 ---
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+  document.addEventListener('keydown', (e) => {
+    const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+    if (
+      e.key === 'F12' ||
+      (isCtrlOrCmd && e.shiftKey && ['I', 'J', 'C', 'i', 'j', 'c'].includes(e.key)) ||
+      (isCtrlOrCmd && ['U', 'u', 'S', 's'].includes(e.key))
+    ) {
+      e.preventDefault();
+      return false;
+    }
+  });
+
+  // --- 2. 検知・警告メッセージ表示エリアの初期化 ---
+  let noticeElement = null;
+  const showNotice = (msg = '⚠️ 開発者ツールまたは改ざんが検知されました') => {
+    if (!noticeElement && document.body) {
+      noticeElement = document.createElement('div');
+      noticeElement.style.cssText = `
+        position: fixed; top: 20px; right: 20px; z-index: 2147483647;
+        background-color: #ff4d4f; color: #ffffff; padding: 12px 20px;
+        border-radius: 8px; font-weight: bold; font-family: sans-serif;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3); pointer-events: none;
+      `;
+      document.body.appendChild(noticeElement);
+    }
+    if (noticeElement) {
+      noticeElement.textContent = msg;
+      noticeElement.style.display = 'block';
+    }
+  };
+
+  // --- 3. 検知型・強力無限デバッガー (検証ツールが開かれるとループ停止・フリーズ) ---
+  const triggerDebugger = () => {
+    const start = performance.now();
+    // 検証ツールが開いている場合、ここで処理がストップする
+    (function () {}.constructor('debugger')());
+    const end = performance.now();
+    
+    // 停止時間が一定（100ms）を超えたら「検証ツールで止められた」と判定
+    if (end - start > 100) {
+      showNotice('⚠️ 検証ツールの使用は禁止されています');
+    }
+  };
+  setInterval(triggerDebugger, 500);
+
+  // --- 4. ウィンドウサイズ変化（ドッキング型DevTools）による検知 ---
+  const threshold = 160;
+  window.addEventListener('resize', () => {
+    const widthDiff = window.outerWidth - window.innerWidth > threshold;
+    const heightDiff = window.outerHeight - window.innerHeight > threshold;
+    if (widthDiff || heightDiff) {
+      showNotice();
+    }
+  });
+
+  // --- 5. console.log評価を利用した検知 ---
+  const dummyImg = new Image();
+  Object.defineProperty(dummyImg, 'id', {
+    get: function () {
+      showNotice();
+    }
+  });
+  setInterval(() => {
+    console.log('%c', dummyImg);
+  }, 2000);
+
+  // --- 6. DOM改ざん（要素の編集・削除・属性変更）のリアルタイム監視 ---
+  window.addEventListener('DOMContentLoaded', () => {
+    if (!document.body) return;
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        // 警告表示自体の削除・変更は無視して無限ループを防ぐ
+        if (noticeElement && (mutation.target === noticeElement || Array.from(mutation.removedNodes).includes(noticeElement))) {
+          continue;
+        }
+        showNotice('⚠️ ページの要素改ざんを検知しました');
+        break;
+      }
+    });
+
+    observer.observe(document.body, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
+  });
+})();
   </script>
 </body>
 </html>
