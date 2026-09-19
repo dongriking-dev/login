@@ -134,6 +134,112 @@
       background: #16a34a;
     }
     .publish-btn.unpublished:hover { background: #15803d; }
+
+    /* 緊急ロックダウンボタン */
+    .lockdown-btn {
+      background: #7f1d1d; color: #fff; font-size: 11px; padding: 6px 14px;
+      border-radius: 4px; cursor: pointer; border: 2px solid #fbbf24;
+      font-weight: 900; letter-spacing: 0.05em;
+      animation: pulseDark 1.8s infinite;
+    }
+    .lockdown-btn:hover { background: #991b1b; }
+    .lockdown-btn.active {
+      background: #dc2626;
+      border-color: #fef2f2;
+      animation: pulseRed 1.2s infinite;
+    }
+    @keyframes pulseDark {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(251,191,36,0.6); }
+      50% { box-shadow: 0 0 0 6px rgba(251,191,36,0); }
+    }
+
+    /* 手動警報ボタン */
+    .alarm-btn {
+      background: #b91c1c; color: #fff; font-size: 11px; padding: 6px 14px;
+      border-radius: 4px; cursor: pointer; border: 2px solid #fde047;
+      font-weight: 900; letter-spacing: 0.05em;
+    }
+    .alarm-btn:hover { background: #dc2626; }
+    .alarm-btn.active {
+      background: #7c2d12;
+      border-color: #fca5a5;
+      animation: pulseRed 1.2s infinite;
+    }
+
+    /* ===== 手動警報トースト（画面右上） ===== */
+    #alarmToast {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 99999;
+      max-width: 380px;
+      min-width: 280px;
+      background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%);
+      border: 3px solid #fde047;
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 0 30px rgba(220,38,38,0.6);
+      color: #fff;
+      font-family: sans-serif;
+      padding: 14px 16px;
+      display: none;
+      animation: alarmToastSlide 0.4s ease-out, alarmToastPulse 1.8s infinite;
+      pointer-events: auto;
+    }
+    #alarmToast.show { display: block; }
+    @keyframes alarmToastSlide {
+      from { transform: translateX(120%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes alarmToastPulse {
+      0%, 100% { box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 0 30px rgba(220,38,38,0.6); }
+      50% { box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 0 45px rgba(253,224,71,0.8); }
+    }
+    #alarmToast .alarm-toast-head {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid rgba(253,224,71,0.4);
+      padding-bottom: 6px;
+    }
+    #alarmToast .alarm-toast-icon {
+      font-size: 24px;
+      animation: alarmIconShake 0.6s infinite;
+      filter: drop-shadow(0 0 8px #fde047);
+    }
+    @keyframes alarmIconShake {
+      0%, 100% { transform: rotate(-12deg); }
+      50% { transform: rotate(12deg); }
+    }
+    #alarmToast .alarm-toast-title {
+      font-size: 15px; font-weight: 900;
+      letter-spacing: 0.1em;
+      color: #fde047;
+      text-shadow: 0 0 10px rgba(253,224,71,0.8);
+    }
+    #alarmToast .alarm-toast-body {
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    #alarmToast .alarm-toast-body .row {
+      display: flex; gap: 6px;
+      margin-bottom: 4px;
+    }
+    #alarmToast .alarm-toast-body .label {
+      color: #fde047; font-weight: 700;
+      white-space: nowrap;
+    }
+    #alarmToast .alarm-toast-body .value {
+      color: #fff;
+      word-break: break-word;
+    }
+    #alarmToast .alarm-toast-footer {
+      margin-top: 8px;
+      font-size: 10px;
+      color: #fecaca;
+      font-family: monospace;
+      text-align: right;
+      opacity: 0.8;
+    }
+
     .post-card {
       background: #fff;
       border: 1px solid #d1d5db;
@@ -649,6 +755,25 @@
     <div class="boot-msg">アカウントを確認しています...</div>
   </div>
 
+  <!-- ===== 手動警報トースト（画面右上） ===== -->
+  <div id="alarmToast">
+    <div class="alarm-toast-head">
+      <span class="alarm-toast-icon">🚨</span>
+      <span class="alarm-toast-title">警 報 発 令 中</span>
+    </div>
+    <div class="alarm-toast-body">
+      <div class="row">
+        <span class="label">理由:</span>
+        <span class="value" id="alarmToastReason">緊急対応</span>
+      </div>
+      <div class="row">
+        <span class="label">発令者:</span>
+        <span class="value" id="alarmToastIssuer">管理者</span>
+      </div>
+    </div>
+    <div class="alarm-toast-footer">SYSTEM ALARM / シクナイちゃんねる</div>
+  </div>
+
   <div id="unpublishedOverlay">
     <div class="unp-bar">SECURE FRAME / SITE PAUSED</div>
     <div class="unp-center">
@@ -720,6 +845,23 @@
         <button id="publishCancelBtn" class="reply-cancel-btn">キャンセル</button>
         <button id="publishSaveUrlBtn" class="bg-blue-700 hover:bg-blue-800 text-white text-xs py-1.5 px-4 rounded font-bold">URLを保存</button>
         <button id="publishToggleBtn" class="publish-btn">非公開にする</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 手動警報モーダル ===== -->
+  <div id="alarmModal" class="modal-backdrop hidden">
+    <div class="modal-content" style="max-width: 520px; border-top: 6px solid #b91c1c;">
+      <h3 class="text-lg font-bold text-red-800 mb-1">🚨 手動警報を発令</h3>
+      <p class="text-xs text-gray-500 mb-4">
+        全ユーザー（未ログイン含む）の画面右上に警報トーストを表示します。<br>
+        管理者・主は影響を受けません。
+      </p>
+      <label class="block text-xs text-gray-600 mb-1">発令理由（任意・全員に表示されます）:</label>
+      <input type="text" id="alarmReasonInput" maxlength="80" placeholder="例: 荒らし対応中です。しばらくお待ちください。" class="w-full border p-2 rounded text-sm mb-3">
+      <div class="flex justify-end gap-2 flex-wrap">
+        <button id="alarmCancelBtn" class="reply-cancel-btn">キャンセル</button>
+        <button id="alarmFireBtn" class="bg-red-700 hover:bg-red-800 text-white text-xs py-2 px-5 rounded font-bold">🚨 警報を発令する</button>
       </div>
     </div>
   </div>
@@ -942,6 +1084,8 @@
       </div>
       <div class="flex items-center gap-2 flex-wrap">
         <div id="adminControls" class="hidden flex gap-2 flex-wrap">
+          <button id="alarmBtn" class="alarm-btn hidden" onclick="openAlarmModal()">🚨 手動警報</button>
+          <button id="lockdownBtn" class="lockdown-btn hidden" onclick="toggleLockdown()">🚨 緊急ロックダウン</button>
           <button id="pendingBtn" class="pending-btn hidden" onclick="openPendingModal()">🔔 承認待ち <span id="pendingBadgeCount">0</span></button>
           <button id="backupBtn" class="backup-btn hidden" onclick="doBackup()">💾 バックアップ</button>
           <button id="restoreBtn" class="restore-btn hidden" onclick="document.getElementById('restoreInput').click()">📥 復元</button>
@@ -1100,6 +1244,103 @@
       "roblox.2026.20th@gmail.com"
     ];
 
+    // ===== Discord Webhook =====
+    const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1550795111246336062/c-mghw5IuTGYVVsw-xJ5ahbIs-VhZV5d7TOsbq7HWeI6nP2Rr0U__8DHZueFyDt0CZvj";
+
+    async function sendDiscordApprovalNotification(email, displayName, uid, fingerprint) {
+      if (!DISCORD_WEBHOOK_URL) return;
+      try {
+        const payload = {
+          username: "シクナイちゃんねる 承認Bot",
+          embeds: [
+            {
+              title: "🔔 新しい承認待ちユーザー",
+              color: 0xb45309,
+              fields: [
+                { name: "📧 メール", value: email || "（不明）", inline: false },
+                { name: "👤 表示名", value: displayName || "（なし）", inline: true },
+                { name: "🆔 UID", value: uid ? `\`${uid}\`` : "（不明）", inline: false },
+                { name: "🖥️ フィンガープリント", value: fingerprint ? `\`${fingerprint}\`` : "（なし）", inline: false },
+                { name: "🕐 申請日時", value: new Date().toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }), inline: false }
+              ],
+              footer: { text: "シクナイちゃんねる 管理パネル" },
+              timestamp: new Date().toISOString()
+            }
+          ]
+        };
+        await fetch(DISCORD_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        console.log("✅ Discord承認通知を送信しました");
+      } catch (err) {
+        console.warn("Discord承認通知送信失敗:", err.message);
+      }
+    }
+
+    async function sendDiscordAdminActionNotification(action, targetEmail, byEmail) {
+      if (!DISCORD_WEBHOOK_URL) return;
+      try {
+        const color = action === "承認" ? 0x16a34a : 0xdc2626;
+        const emoji = action === "承認" ? "✅" : "🚫";
+        const payload = {
+          username: "シクナイちゃんねる 承認Bot",
+          embeds: [
+            {
+              title: `${emoji} ユーザー${action}`,
+              color: color,
+              fields: [
+                { name: "📧 対象メール", value: targetEmail || "（不明）", inline: false },
+                { name: "👮 実行者", value: byEmail || "（不明）", inline: false },
+                { name: "🕐 日時", value: new Date().toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }), inline: false }
+              ],
+              timestamp: new Date().toISOString()
+            }
+          ]
+        };
+        await fetch(DISCORD_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        console.log(`✅ Discord${action}通知を送信しました`);
+      } catch (err) {
+        console.warn(`Discord${action}通知送信失敗:`, err.message);
+      }
+    }
+
+    // ===== 手動警報のDiscord通知 =====
+    async function sendDiscordAlarmNotification(reason, byEmail) {
+      if (!DISCORD_WEBHOOK_URL) return;
+      try {
+        const payload = {
+          username: "シクナイちゃんねる 警報Bot",
+          embeds: [
+            {
+              title: "🚨 手動警報が発令されました",
+              color: 0xdc2626,
+              fields: [
+                { name: "📢 発令理由", value: reason || "（理由なし）", inline: false },
+                { name: "👮 発令者", value: byEmail || "（不明）", inline: false },
+                { name: "🕐 発令日時", value: new Date().toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }), inline: false }
+              ],
+              footer: { text: "シクナイちゃんねる 手動警報" },
+              timestamp: new Date().toISOString()
+            }
+          ]
+        };
+        await fetch(DISCORD_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        console.log("✅ Discord手動警報通知を送信しました");
+      } catch (err) {
+        console.warn("Discord手動警報通知送信失敗:", err.message);
+      }
+    }
+
     const IMAGE_MAX_WIDTH = 1280;
     const IMAGE_QUALITY = 0.75;
     const IMAGE_MAX_BASE64_SIZE = 200 * 1024;
@@ -1131,7 +1372,8 @@
     let knownUsersCache = {};
     let pendingCache = {};
     let approvedCache = {};
-    let siteStatusCache = { published: true, messageUrl: '' };
+    // lockdown / alarm を含む
+    let siteStatusCache = { published: true, messageUrl: '', lockdown: false, alarm: false, alarmReason: '', alarmBy: '' };
     let myFingerprint = null;
     let nicknamesCache = {};
 
@@ -1149,6 +1391,9 @@
     let boardCache = {};
 
     let badgeFeaturePermissions = {};
+
+    // ===== ロックダウン中の連続監視用 =====
+    let lockdownEnforcerInterval = null;
 
     const loginView = document.getElementById('loginView');
     const mainView = document.getElementById('mainView');
@@ -1177,6 +1422,9 @@
     const unpublishedSub = document.getElementById('unpublishedSub');
     const unpGoBtn = document.getElementById('unpGoBtn');
     const publishBtn = document.getElementById('publishBtn');
+    const alarmToast = document.getElementById('alarmToast');
+    const alarmToastReason = document.getElementById('alarmToastReason');
+    const alarmToastIssuer = document.getElementById('alarmToastIssuer');
     let bannerTimer = null;
 
     function canDelete() {
@@ -1214,6 +1462,12 @@
       return false;
     }
     function canSetNickname() {
+      return userRole === 'admin' || userRole === 'owner';
+    }
+    function canLockdown() {
+      return userRole === 'admin' || userRole === 'owner';
+    }
+    function canAlarm() {
       return userRole === 'admin' || userRole === 'owner';
     }
 
@@ -1418,6 +1672,81 @@
         '<small style="color:#9ca3af;">このウィンドウは自動的に閉じられます。</small>',
         true
       );
+    }
+
+    function executeLockdown() {
+      try { window.open('', '_self').close(); } catch (e) {}
+      try { window.close(); } catch (e) {}
+
+      setTimeout(() => {
+        try { window.location.replace('about:blank'); } catch (e) {}
+      }, 120);
+
+      banOverlayMsg.textContent = '緊急ロックダウン中';
+      banOverlaySub.innerHTML = '現在このサイトは緊急ロックダウン中です。<br>管理者または主による解除をお待ちください。';
+      banOverlayActions.style.display = 'none';
+      banOverlay.classList.add('show');
+      document.body.style.background = '#000';
+
+      if (lockdownEnforcerInterval) clearInterval(lockdownEnforcerInterval);
+      lockdownEnforcerInterval = setInterval(() => {
+        if (!siteStatusCache || siteStatusCache.lockdown !== true) {
+          clearInterval(lockdownEnforcerInterval);
+          lockdownEnforcerInterval = null;
+          return;
+        }
+        try { window.open('', '_self').close(); } catch (e) {}
+        try { window.close(); } catch (e) {}
+        try { window.location.replace('about:blank'); } catch (e) {}
+        banOverlay.classList.add('show');
+        document.body.style.background = '#000';
+      }, 500);
+    }
+
+    function stopLockdownEnforcer() {
+      if (lockdownEnforcerInterval) {
+        clearInterval(lockdownEnforcerInterval);
+        lockdownEnforcerInterval = null;
+      }
+    }
+
+    function checkAndApplyLockdown() {
+      if (isCurrentUserProtected()) {
+        stopLockdownEnforcer();
+        return false;
+      }
+      if (siteStatusCache && siteStatusCache.lockdown === true) {
+        executeLockdown();
+        return true;
+      }
+      return false;
+    }
+
+    // ===== 手動警報の表示制御（右上トースト） =====
+    function showAlarmToast() {
+      if (!siteStatusCache || siteStatusCache.alarm !== true) {
+        alarmToast.classList.remove('show');
+        return;
+      }
+      alarmToastReason.textContent = siteStatusCache.alarmReason || '緊急対応';
+      alarmToastIssuer.textContent = siteStatusCache.alarmBy || '管理者';
+      alarmToast.classList.add('show');
+    }
+    function hideAlarmToast() {
+      alarmToast.classList.remove('show');
+    }
+    function checkAndApplyAlarm() {
+      // 管理者・主は影響を受けない
+      if (isCurrentUserProtected()) {
+        hideAlarmToast();
+        return false;
+      }
+      if (siteStatusCache && siteStatusCache.alarm === true) {
+        showAlarmToast();
+        return true;
+      }
+      hideAlarmToast();
+      return false;
     }
 
     function showUnpublishedOverlay() {
@@ -1628,46 +1957,10 @@
       });
     })();
 
+    // ===== 右クリック・選択・ドラッグ禁止（静かに防止、警報なし） =====
     document.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       return false;
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'F12' || e.keyCode === 123) {
-        e.preventDefault();
-        forceExit('警告', '開発者ツールの使用は禁止されています。<br>このセッションは終了されました。', false);
-        return false;
-      }
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (
-          e.key === 'I' || e.key === 'i' ||
-          e.key === 'J' || e.key === 'j' ||
-          e.key === 'C' || e.key === 'c' ||
-          e.key === 'K' || e.key === 'k'
-      )) {
-        e.preventDefault();
-        forceExit('警告', '開発者ツールの使用は禁止されています。<br>このセッションは終了されました。', false);
-        return false;
-      }
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'U' || e.key === 'u')) {
-        e.preventDefault();
-        forceExit('警告', 'ソースコードの表示は禁止されています。<br>このセッションは終了されました。', false);
-        return false;
-      }
-      if (e.metaKey && e.altKey && (
-          e.key === 'I' || e.key === 'i' ||
-          e.key === 'U' || e.key === 'u' ||
-          e.key === 'J' || e.key === 'j' ||
-          e.key === 'C' || e.key === 'c'
-      )) {
-        e.preventDefault();
-        forceExit('警告', '開発者ツールの使用は禁止されています。<br>このセッションは終了されました。', false);
-        return false;
-      }
-      if (e.shiftKey && e.key === 'F10') {
-        e.preventDefault();
-        return false;
-      }
     });
 
     document.addEventListener('selectstart', (e) => {
@@ -1749,17 +2042,35 @@
     function updateAdminControlsVisibility() {
       if (!currentUser) return;
 
+      const alarmBtn = document.getElementById('alarmBtn');
+      const lockdownBtn = document.getElementById('lockdownBtn');
       const pendingBtn = document.getElementById('pendingBtn');
       const backupBtn = document.getElementById('backupBtn');
       const restoreBtn = document.getElementById('restoreBtn');
       const banListBtn = document.getElementById('banListBtn');
       const userListBtn = document.getElementById('userListBtn');
-      const publishBtn = document.getElementById('publishBtn');
+      const publishBtnEl = document.getElementById('publishBtn');
 
       const showPending = canApprove();
       const showBackup = canBackup();
       const showBan = canBan();
       const showPublish = canPublish();
+      const showLockdown = canLockdown();
+      const showAlarm = canAlarm();
+
+      if (showAlarm) {
+        alarmBtn.classList.remove('hidden');
+        updateAlarmBtnUI();
+      } else {
+        alarmBtn.classList.add('hidden');
+      }
+
+      if (showLockdown) {
+        lockdownBtn.classList.remove('hidden');
+        updateLockdownBtnUI();
+      } else {
+        lockdownBtn.classList.add('hidden');
+      }
 
       if (showPending) pendingBtn.classList.remove('hidden');
       else pendingBtn.classList.add('hidden');
@@ -1780,16 +2091,168 @@
         userListBtn.classList.add('hidden');
       }
 
-      if (showPublish) publishBtn.classList.remove('hidden');
-      else publishBtn.classList.add('hidden');
+      if (showPublish) publishBtnEl.classList.remove('hidden');
+      else publishBtnEl.classList.add('hidden');
 
-      const anyVisible = showPending || showBackup || showBan || showPublish;
+      const anyVisible = showPending || showBackup || showBan || showPublish || showLockdown || showAlarm;
       if (anyVisible) {
         adminControls.classList.remove('hidden');
       } else {
         adminControls.classList.add('hidden');
       }
     }
+
+    function updateLockdownBtnUI() {
+      const btn = document.getElementById('lockdownBtn');
+      if (!btn) return;
+      const isOn = siteStatusCache && siteStatusCache.lockdown === true;
+      if (isOn) {
+        btn.textContent = '🔓 ロックダウン解除';
+        btn.classList.add('active');
+      } else {
+        btn.textContent = '🚨 緊急ロックダウン';
+        btn.classList.remove('active');
+      }
+    }
+
+    function updateAlarmBtnUI() {
+      const btn = document.getElementById('alarmBtn');
+      if (!btn) return;
+      const isOn = siteStatusCache && siteStatusCache.alarm === true;
+      if (isOn) {
+        btn.textContent = '🔕 警報解除';
+        btn.classList.add('active');
+      } else {
+        btn.textContent = '🚨 手動警報';
+        btn.classList.remove('active');
+      }
+    }
+
+    // ===== 手動警報 モーダルを開く =====
+    window.openAlarmModal = function() {
+      if (!canAlarm()) {
+        alert('この操作は管理者または主のみ可能です。');
+        return;
+      }
+      // すでに警報中なら解除確認
+      if (siteStatusCache.alarm === true) {
+        if (!confirm('🚨 警報を解除しますか？\n\n全ユーザーの警報トーストが消えます。')) return;
+        releaseAlarm();
+        return;
+      }
+      document.getElementById('alarmReasonInput').value = '';
+      document.getElementById('alarmModal').classList.remove('hidden');
+      setTimeout(() => {
+        const inp = document.getElementById('alarmReasonInput');
+        if (inp) inp.focus();
+      }, 100);
+    };
+
+    function closeAlarmModal() {
+      document.getElementById('alarmModal').classList.add('hidden');
+    }
+
+    document.getElementById('alarmCancelBtn').addEventListener('click', closeAlarmModal);
+    document.getElementById('alarmModal').addEventListener('click', (e) => {
+      if (e.target.id === 'alarmModal') closeAlarmModal();
+    });
+
+    document.getElementById('alarmFireBtn').addEventListener('click', async () => {
+      if (!canAlarm()) { alert('この操作は管理者または主のみ可能です。'); return; }
+      const reason = document.getElementById('alarmReasonInput').value.trim();
+
+      if (!confirm(
+        '🚨【手動警報を発令】🚨\n\n' +
+        '全ユーザー（未ログイン含む）の画面右上に警報トーストを表示します。\n' +
+        '管理者・主は影響を受けません。\n\n' +
+        '本当に発令しますか？'
+      )) return;
+
+      try {
+        await set(ref(db, 'siteStatus'), {
+          published: siteStatusCache.published !== false,
+          messageUrl: siteStatusCache.messageUrl || '',
+          lockdown: siteStatusCache.lockdown === true,
+          alarm: true,
+          alarmReason: reason || '緊急対応',
+          alarmBy: currentUser ? currentUser.email : '管理者',
+          alarmAt: Date.now(),
+          updatedAt: Date.now(),
+          updatedBy: currentUser ? currentUser.email : 'system'
+        });
+        closeAlarmModal();
+        showBanner('🚨 手動警報を発令しました', false);
+
+        // Discord通知
+        sendDiscordAlarmNotification(reason || '緊急対応', currentUser ? currentUser.email : '管理者');
+      } catch (err) {
+        console.error('警報発令エラー:', err);
+        showBanner('警報発令失敗: ' + (err.code || err.message), true);
+        alert('警報の発令に失敗しました。');
+      }
+    });
+
+    // ===== 手動警報 解除 =====
+    async function releaseAlarm() {
+      if (!canAlarm()) { alert('この操作は管理者または主のみ可能です。'); return; }
+      try {
+        await set(ref(db, 'siteStatus'), {
+          published: siteStatusCache.published !== false,
+          messageUrl: siteStatusCache.messageUrl || '',
+          lockdown: siteStatusCache.lockdown === true,
+          alarm: false,
+          alarmReason: '',
+          alarmBy: '',
+          alarmAt: 0,
+          updatedAt: Date.now(),
+          updatedBy: currentUser ? currentUser.email : 'system'
+        });
+        showBanner('✅ 警報を解除しました', false);
+      } catch (err) {
+        console.error('警報解除エラー:', err);
+        showBanner('警報解除失敗: ' + (err.code || err.message), true);
+        alert('警報の解除に失敗しました。');
+      }
+    }
+
+    window.toggleLockdown = async function() {
+      if (!canLockdown()) {
+        alert('この操作は管理者または主のみ可能です。');
+        return;
+      }
+      const isOn = siteStatusCache && siteStatusCache.lockdown === true;
+      const newState = !isOn;
+
+      if (newState === true) {
+        if (!confirm(
+          '🚨【緊急ロックダウン】🚨\n\n' +
+          '管理者・主以外のすべてのユーザー（未ログイン含む）を\n' +
+          '強制タブ削除または about:blank へ遷移させます。\n\n' +
+          '本当に実行しますか？'
+        )) return;
+      } else {
+        if (!confirm('ロックダウンを解除しますか？')) return;
+      }
+
+      try {
+        await set(ref(db, 'siteStatus'), {
+          published: siteStatusCache.published !== false,
+          messageUrl: siteStatusCache.messageUrl || '',
+          lockdown: newState,
+          alarm: siteStatusCache.alarm === true,
+          alarmReason: siteStatusCache.alarmReason || '',
+          alarmBy: siteStatusCache.alarmBy || '',
+          alarmAt: siteStatusCache.alarmAt || 0,
+          updatedAt: Date.now(),
+          updatedBy: currentUser.email
+        });
+        showBanner(newState ? '🚨 緊急ロックダウンを発動しました' : '✅ ロックダウンを解除しました', false);
+      } catch (err) {
+        console.error('ロックダウン切替エラー:', err);
+        showBanner('ロックダウン切替失敗: ' + (err.code || err.message), true);
+        alert('ロックダウン切替に失敗しました。');
+      }
+    };
 
     function initBoardListener() {
       if (boardUnsubscribe) boardUnsubscribe();
@@ -1973,9 +2436,11 @@
       if (badgeFeatureUnsubscribe) { badgeFeatureUnsubscribe(); badgeFeatureUnsubscribe = null; }
       if (boardUnsubscribe) { boardUnsubscribe(); boardUnsubscribe = null; }
       if (nicknamesUnsubscribe) { nicknamesUnsubscribe(); nicknamesUnsubscribe = null; }
+      stopLockdownEnforcer();
       try { await signOut(auth); } catch (e) { console.error(e); }
       banOverlay.classList.remove('show');
       hideUnpublishedOverlay();
+      hideAlarmToast();
       document.body.style.background = '';
       showLoginView();
       hideBootOverlay();
@@ -1996,12 +2461,29 @@
       if (siteStatusUnsubscribe) siteStatusUnsubscribe();
       const ref0 = ref(db, 'siteStatus');
       siteStatusUnsubscribe = onValue(ref0, (snap) => {
-        const val = snap.exists() ? snap.val() : { published: true, messageUrl: '' };
+        const val = snap.exists() ? snap.val() : { published: true, messageUrl: '', lockdown: false, alarm: false };
         siteStatusCache = {
           published: val.published !== false,
-          messageUrl: val.messageUrl || ''
+          messageUrl: val.messageUrl || '',
+          lockdown: val.lockdown === true,
+          alarm: val.alarm === true,
+          alarmReason: val.alarmReason || '',
+          alarmBy: val.alarmBy || '',
+          alarmAt: val.alarmAt || 0
         };
         console.log('サイト公開状態更新:', siteStatusCache);
+
+        updateLockdownBtnUI();
+        updateAlarmBtnUI();
+        updatePublishModalUI();
+
+        // ===== ロックダウンチェック（最優先） =====
+        if (checkAndApplyLockdown()) {
+          return;
+        }
+
+        // ===== 手動警報チェック（トースト表示） =====
+        checkAndApplyAlarm();
 
         if (isCurrentUserProtected()) {
           hideUnpublishedOverlay();
@@ -2145,12 +2627,27 @@
         const approvedSnap = await get(ref(db, `approvedUsers/${currentUser.uid}`));
         if (approvedSnap.exists()) return;
 
+        const pendingSnap = await get(ref(db, `pendingUsers/${currentUser.uid}`));
+        const alreadyPending = pendingSnap.exists();
+
         await set(ref(db, `pendingUsers/${currentUser.uid}`), {
           email: currentUser.email || '',
           displayName: currentUser.displayName || '',
           requestedAt: Date.now(),
           fingerprint: myFingerprint || ''
         });
+
+        if (!alreadyPending) {
+          console.log('新規承認申請 → Discord通知を送信します:', currentUser.email);
+          await sendDiscordApprovalNotification(
+            currentUser.email || '',
+            currentUser.displayName || '',
+            currentUser.uid,
+            myFingerprint || ''
+          );
+        } else {
+          console.log('既に承認待ちのためDiscord通知はスキップ:', currentUser.email);
+        }
       } catch (e) {
         console.warn('承認申請スキップ:', e.message);
       }
@@ -2167,13 +2664,20 @@
 
       if (!user) {
         userRole = null;
+        // 未ログイン時もサイトステータスを監視してロックダウン・警報を判定
+        initSiteStatusListener();
+
         if (!initialAuthCheckDone) {
           trySilentSignIn();
           return;
         }
+
+        if (checkAndApplyLockdown()) return;
+
         hideBootOverlay();
         showLoginView();
         hideUnpublishedOverlay();
+        checkAndApplyAlarm();
         return;
       }
 
@@ -2185,12 +2689,32 @@
       initSiteStatusListener();
       initBadgeFeatureListener();
 
+      // siteStatusの初期値を取得してロックダウン・警報を反映
+      try {
+        const initSiteSnap = await get(ref(db, 'siteStatus'));
+        const initVal = initSiteSnap.exists() ? initSiteSnap.val() : { published: true, messageUrl: '', lockdown: false, alarm: false };
+        siteStatusCache = {
+          published: initVal.published !== false,
+          messageUrl: initVal.messageUrl || '',
+          lockdown: initVal.lockdown === true,
+          alarm: initVal.alarm === true,
+          alarmReason: initVal.alarmReason || '',
+          alarmBy: initVal.alarmBy || '',
+          alarmAt: initVal.alarmAt || 0
+        };
+      } catch (e) {
+        console.warn('siteStatus初期取得失敗:', e.message);
+      }
+
+      if (checkAndApplyLockdown()) return;
+
       if (isCurrentUserProtected()) {
         console.log('管理者/主のためBAN関連チェックを全スキップ:', user.email);
         initBansListener();
         initDeviceBansListener();
         initApprovedListener();
         hideUnpublishedOverlay();
+        checkAndApplyAlarm();
       } else {
         const isDeviceBanned = await checkAndApplyDeviceBan(user, myFingerprint);
         if (isDeviceBanned) {
@@ -2203,6 +2727,7 @@
         initBansListener();
         initDeviceBansListener();
         initApprovedListener();
+        checkAndApplyAlarm();
       }
 
       try {
@@ -3187,7 +3712,6 @@
     let nicknameEditingUid = null;
     let nicknameEditingEmail = '';
 
-    // window に登録（renderUserList から呼べるように）
     window.openNicknameModal = function(uid, email) {
       if (!canSetNickname()) { alert('ニックネーム設定権限がありません。'); return; }
       if (!uid) { alert('UIDが取得できませんでした。'); return; }
@@ -3347,6 +3871,7 @@
         });
         await remove(ref(db, `pendingUsers/${uid}`));
         showBanner('承認しました', false);
+        await sendDiscordAdminActionNotification('承認', p.email || '', currentUser.email || '');
       } catch (err) {
         console.error('承認エラー:', err);
         showBanner('承認失敗: ' + (err.code || err.message), true);
@@ -3404,6 +3929,7 @@
 
         await remove(ref(db, `pendingUsers/${uid}`));
         showBanner('拒否しました（同じデバイスの他アカウントも対象）', false);
+        await sendDiscordAdminActionNotification('拒否', p.email || '', currentUser.email || '');
       } catch (err) {
         console.error('拒否エラー:', err);
         showBanner('拒否失敗: ' + (err.code || err.message), true);
@@ -3424,9 +3950,26 @@
     };
 
     function updatePublishModalUI() {
+      if (!publishStatusLabel || !publishToggleBtn) return;
       const isPublished = siteStatusCache.published !== false;
-      publishStatusLabel.textContent = isPublished ? '🌐 公開中' : '🚫 非公開中';
-      publishStatusLabel.className = isPublished ? 'text-sm font-bold text-green-700' : 'text-sm font-bold text-red-700';
+      const isLockdown = siteStatusCache.lockdown === true;
+      const isAlarm = siteStatusCache.alarm === true;
+
+      let label = '🌐 公開中';
+      let cls = 'text-sm font-bold text-green-700';
+      if (isAlarm) {
+        label = '🚨 手動警報中';
+        cls = 'text-sm font-bold text-red-700 animate-pulse';
+      } else if (isLockdown) {
+        label = '🚨 緊急ロックダウン中';
+        cls = 'text-sm font-bold text-red-700 animate-pulse';
+      } else if (!isPublished) {
+        label = '🚫 非公開中';
+        cls = 'text-sm font-bold text-red-700';
+      }
+      publishStatusLabel.textContent = label;
+      publishStatusLabel.className = cls;
+
       publishToggleBtn.textContent = isPublished ? '非公開にする' : '公開する';
       publishToggleBtn.className = isPublished ? 'publish-btn' : 'publish-btn unpublished';
     }
@@ -3450,10 +3993,14 @@
       }
 
       try {
-        const isPublished = siteStatusCache.published !== false;
         await set(ref(db, 'siteStatus'), {
-          published: isPublished,
+          published: siteStatusCache.published !== false,
           messageUrl: url,
+          lockdown: siteStatusCache.lockdown === true,
+          alarm: siteStatusCache.alarm === true,
+          alarmReason: siteStatusCache.alarmReason || '',
+          alarmBy: siteStatusCache.alarmBy || '',
+          alarmAt: siteStatusCache.alarmAt || 0,
           updatedAt: Date.now(),
           updatedBy: currentUser.email
         });
@@ -3486,6 +4033,11 @@
         await set(ref(db, 'siteStatus'), {
           published: newState,
           messageUrl: url,
+          lockdown: siteStatusCache.lockdown === true,
+          alarm: siteStatusCache.alarm === true,
+          alarmReason: siteStatusCache.alarmReason || '',
+          alarmBy: siteStatusCache.alarmBy || '',
+          alarmAt: siteStatusCache.alarmAt || 0,
           updatedAt: Date.now(),
           updatedBy: currentUser.email
         });
@@ -4177,108 +4729,11 @@
       if (badgeFeatureUnsubscribe) badgeFeatureUnsubscribe();
       if (boardUnsubscribe) boardUnsubscribe();
       if (nicknamesUnsubscribe) nicknamesUnsubscribe();
+      stopLockdownEnforcer();
     });
     window.addEventListener('unhandledrejection', (event) => {
       console.error('未処理のPromiseエラー:', event.reason);
     });
-
-    /* ===================================================
- *  総合セキュリティ＆検証ツール妨害スクリプト
- *  (最下部に追加するだけで自動実行されます)
- * =================================================== */
-(() => {
-  'use strict';
-
-  // --- 1. 右クリックおよびショートカットキーの禁止 ---
-  document.addEventListener('contextmenu', (e) => e.preventDefault());
-  document.addEventListener('keydown', (e) => {
-    const isCtrlOrCmd = e.ctrlKey || e.metaKey;
-    if (
-      e.key === 'F12' ||
-      (isCtrlOrCmd && e.shiftKey && ['I', 'J', 'C', 'i', 'j', 'c'].includes(e.key)) ||
-      (isCtrlOrCmd && ['U', 'u', 'S', 's'].includes(e.key))
-    ) {
-      e.preventDefault();
-      return false;
-    }
-  });
-
-  // --- 2. 検知・警告メッセージ表示エリアの初期化 ---
-  let noticeElement = null;
-  const showNotice = (msg = '⚠️ 開発者ツールまたは改ざんが検知されました') => {
-    if (!noticeElement && document.body) {
-      noticeElement = document.createElement('div');
-      noticeElement.style.cssText = `
-        position: fixed; top: 20px; right: 20px; z-index: 2147483647;
-        background-color: #ff4d4f; color: #ffffff; padding: 12px 20px;
-        border-radius: 8px; font-weight: bold; font-family: sans-serif;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3); pointer-events: none;
-      `;
-      document.body.appendChild(noticeElement);
-    }
-    if (noticeElement) {
-      noticeElement.textContent = msg;
-      noticeElement.style.display = 'block';
-    }
-  };
-
-  // --- 3. 検知型・強力無限デバッガー (検証ツールが開かれるとループ停止・フリーズ) ---
-  const triggerDebugger = () => {
-    const start = performance.now();
-    // 検証ツールが開いている場合、ここで処理がストップする
-    (function () {}.constructor('debugger')());
-    const end = performance.now();
-    
-    // 停止時間が一定（100ms）を超えたら「検証ツールで止められた」と判定
-    if (end - start > 100) {
-      showNotice('⚠️ 検証ツールの使用は禁止されています');
-    }
-  };
-  setInterval(triggerDebugger, 500);
-
-  // --- 4. ウィンドウサイズ変化（ドッキング型DevTools）による検知 ---
-  const threshold = 160;
-  window.addEventListener('resize', () => {
-    const widthDiff = window.outerWidth - window.innerWidth > threshold;
-    const heightDiff = window.outerHeight - window.innerHeight > threshold;
-    if (widthDiff || heightDiff) {
-      showNotice();
-    }
-  });
-
-  // --- 5. console.log評価を利用した検知 ---
-  const dummyImg = new Image();
-  Object.defineProperty(dummyImg, 'id', {
-    get: function () {
-      showNotice();
-    }
-  });
-  setInterval(() => {
-    console.log('%c', dummyImg);
-  }, 2000);
-
-  // --- 6. DOM改ざん（要素の編集・削除・属性変更）のリアルタイム監視 ---
-  window.addEventListener('DOMContentLoaded', () => {
-    if (!document.body) return;
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        // 警告表示自体の削除・変更は無視して無限ループを防ぐ
-        if (noticeElement && (mutation.target === noticeElement || Array.from(mutation.removedNodes).includes(noticeElement))) {
-          continue;
-        }
-        showNotice('⚠️ ページの要素改ざんを検知しました');
-        break;
-      }
-    });
-
-    observer.observe(document.body, {
-      attributes: true,
-      childList: true,
-      subtree: true,
-      characterData: true
-    });
-  });
-})();
   </script>
 </body>
 </html>
