@@ -7,7 +7,6 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='4' width='56' height='56' rx='8' fill='%23d97706'/%3E%3Crect x='8' y='8' width='48' height='48' rx='4' fill='%23f59e0b'/%3E%3Crect x='14' y='18' width='36' height='36' rx='2' fill='%23ffffff' transform='rotate(-4 32 36)'/%3E%3Cpath d='M20 28h24M20 35h24M20 42h16' stroke='%2394a3b8' stroke-width='3' stroke-linecap='round' transform='rotate(-4 32 36)'/%3E%3Ccircle cx='32' cy='14' r='4' fill='%23ef4444'/%3E%3Ccircle cx='31' cy='13' r='1.5' fill='%23fca5a5'/%3E%3C/svg%3E">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* ===== 既存のスタイル（変更なし） ===== */
     .threads-scroll { max-height: 480px; overflow-y: auto; scrollbar-width: thin; }
     .post-number { font-weight: 700; color: #991b1b; }
     .post-author { color: #15803d; font-weight: 600; }
@@ -324,6 +323,19 @@
       font-family: monospace; font-size: 12px;
       color: #1e40af; word-break: break-all; font-weight: 600;
     }
+    .user-row .nickname-line {
+      font-size: 12px; margin-top: 2px;
+      color: #1d4ed8; font-weight: 700;
+      word-break: break-all;
+    }
+    .user-row .nickname-line .nickname-value {
+      background: #dbeafe; color: #1e3a8a;
+      padding: 1px 6px; border-radius: 4px;
+      display: inline-block;
+    }
+    .user-row .nickname-line .nickname-empty {
+      color: #9ca3af; font-weight: 400;
+    }
     .user-row .meta-line {
       font-size: 10px; color: #6b7280; margin-top: 2px;
       word-break: break-all;
@@ -337,7 +349,7 @@
     .user-row .role-tag.vip   { background: #7c3aed; }
     .user-row .role-tag.none  { background: #6b7280; }
     .user-row .role-tag.banned { background: #991b1b; }
-    .user-row .action-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+    .user-row .action-btns { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; max-width: 220px; }
     .user-row .btn-mini {
       font-size: 10px; padding: 3px 8px; border-radius: 4px;
       border: none; cursor: pointer; color: #fff; white-space: nowrap;
@@ -348,6 +360,9 @@
     .user-row .btn-unban:hover { background: #15803d; }
     .user-row .btn-copy { background: #6b7280; }
     .user-row .btn-copy:hover { background: #4b5563; }
+    .user-row .btn-nickname { background: #1d4ed8; }
+    .user-row .btn-nickname:hover { background: #1e3a8a; }
+
     .user-search-input {
       width: 100%; border: 1px solid #d1d5db; padding: 8px;
       border-radius: 6px; font-size: 13px; margin-bottom: 10px;
@@ -520,7 +535,6 @@
       animation: spin 0.8s linear infinite;
     }
 
-    /* 追加：右クリック禁止用のカーソル制御 */
     body {
       -webkit-user-select: none;
       -moz-user-select: none;
@@ -534,7 +548,6 @@
       user-select: text;
     }
 
-    /* ===== バッジ機能拡張用 ===== */
     .badge-feature-list {
       margin-top: 6px;
       font-size: 11px;
@@ -557,17 +570,85 @@
       background: #16a34a;
       color: #fff;
     }
+
+    #boardView { margin-top: 16px; }
+    .board-card {
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border-left: 4px solid #b45309;
+    }
+    .board-card .board-title {
+      font-weight: 700;
+      color: #78350f;
+      font-size: 18px;
+    }
+    .board-card .board-meta {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+    .board-card .board-body {
+      margin-top: 8px;
+      font-size: 14px;
+      color: #1f2937;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .board-card .board-img { margin-top: 10px; }
+    .board-card .board-img img {
+      max-height: 360px;
+      max-width: 100%;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+    }
+    .board-card .board-img a {
+      font-size: 12px;
+      color: #2563eb;
+      text-decoration: underline;
+      word-break: break-all;
+    }
+    .board-delete-btn {
+      background: #dc2626; color: #fff; font-size: 11px; padding: 3px 10px;
+      border-radius: 4px; cursor: pointer; border: none;
+    }
+    .board-delete-btn:hover { background: #b91c1c; }
+
+    .board-publish-btn {
+      background: #b45309; color: #fff; font-size: 12px; padding: 8px 18px;
+      border-radius: 6px; border: none; cursor: pointer; font-weight: 700;
+    }
+    .board-publish-btn:hover { background: #92400e; }
+    .board-publish-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+
+    .board-form-box {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .board-readonly-note {
+      font-size: 12px;
+      color: #92400e;
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 16px;
+    }
   </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans p-4 max-w-4xl mx-auto">
 
-  <!-- 起動時ローディング -->
   <div id="bootOverlay">
     <div class="boot-spinner"></div>
     <div class="boot-msg">アカウントを確認しています...</div>
   </div>
 
-  <!-- ★ 非公開画面（Frame風オーバーレイ） -->
   <div id="unpublishedOverlay">
     <div class="unp-bar">SECURE FRAME / SITE PAUSED</div>
     <div class="unp-center">
@@ -580,7 +661,6 @@
     </div>
   </div>
 
-  <!-- サイトルール -->
   <div id="siteRules" class="collapsed bg-white border-2 border-red-800 rounded-lg shadow mb-4 overflow-hidden">
     <button id="rulesToggleBtn"
       class="w-full bg-red-900 hover:bg-red-800 text-white text-left px-4 py-3 flex items-center justify-between transition">
@@ -615,7 +695,6 @@
     </div>
   </div>
 
-  <!-- BAN/承認待ち画面 -->
   <div id="banOverlay">
     <div class="ban-msg" id="banOverlayMsg">アクセスが拒否されました</div>
     <div class="ban-sub" id="banOverlaySub"></div>
@@ -626,7 +705,6 @@
 
   <div id="statusBanner" class="bg-red-600 text-white"></div>
 
-  <!-- 公開/非公開設定モーダル -->
   <div id="publishModal" class="modal-backdrop hidden">
     <div class="modal-content">
       <h3 class="text-lg font-bold text-gray-800 mb-1">🌐 サイト公開設定</h3>
@@ -645,7 +723,6 @@
     </div>
   </div>
 
-  <!-- ★★★ バッジ管理モーダル（機能付き完全版） ★★★ -->
   <div id="badgeModal" class="modal-backdrop hidden">
     <div class="modal-content" style="max-width: 620px;">
       <h3 class="text-lg font-bold text-gray-800 mb-1">🏷️ バッジ管理（機能設定可能）</h3>
@@ -653,7 +730,6 @@
         対象: <span id="badgeTargetEmail" class="admin-email"></span>
       </p>
 
-      <!-- バッジ一覧 -->
       <div class="mb-3">
         <p class="text-xs font-bold text-gray-600 mb-2">現在のバッジ:</p>
         <div id="badgeListContainer">
@@ -661,10 +737,8 @@
         </div>
       </div>
 
-      <!-- 新規追加ボタン -->
       <button id="addBadgeBtn" class="add-badge-btn w-full mb-3">＋ 新しいバッジを追加</button>
 
-      <!-- エディター -->
       <div id="badgeEditor" class="editor-box hidden">
         <p class="text-xs font-bold text-gray-700 mb-2" id="badgeEditorTitle">新しいバッジ</p>
 
@@ -678,13 +752,11 @@
           <input type="text" id="badgeColorText" value="#ef4444" maxlength="7" class="flex-1 border p-2 rounded text-sm font-mono">
         </div>
 
-        <!-- プレビュー -->
         <div class="mb-3">
           <p class="text-xs text-gray-600 mb-1">プレビュー:</p>
           <span id="badgePreviewChip" class="custom-badge" style="background:#ef4444;">バッジ</span>
         </div>
 
-        <!-- ★★★ 機能設定セクション ★★★ -->
         <div class="mb-3 p-3 bg-gray-50 rounded border border-gray-200">
           <p class="text-xs font-bold text-gray-700 mb-2">⚙️ バッジに付与する機能（複数選択可）</p>
           <div class="space-y-1">
@@ -720,6 +792,10 @@
               <input type="checkbox" class="badge-feature-checkbox" value="canManageBadge" data-feature="canManageBadge">
               <span>🏷️ バッジ管理権限</span>
             </label>
+            <label class="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
+              <input type="checkbox" class="badge-feature-checkbox" value="canManageBoard" data-feature="canManageBoard">
+              <span>📋 掲示板管理権限（投稿・削除）</span>
+            </label>
           </div>
         </div>
 
@@ -734,7 +810,6 @@
     </div>
   </div>
 
-  <!-- BAN管理モーダル -->
   <div id="banModal" class="modal-backdrop hidden">
     <div class="modal-content">
       <h3 class="text-lg font-bold text-gray-800 mb-1">🚫 BANユーザー管理</h3>
@@ -763,18 +838,23 @@
     </div>
   </div>
 
-  <!-- ユーザー一覧モーダル -->
   <div id="userModal" class="modal-backdrop hidden">
-    <div class="modal-content" style="max-width: 640px;">
+    <div class="modal-content" style="max-width: 720px;">
       <h3 class="text-lg font-bold text-gray-800 mb-1">👥 サイトを開いたユーザー一覧</h3>
-      <p class="text-xs text-gray-500 mb-3">ログインしたことがある全ユーザーの一覧です（新しい順）。</p>
-      <input type="text" id="userSearchInput" class="user-search-input" placeholder="🔍 メールアドレスで検索...">
-      <div class="flex items-center justify-between mb-2">
+      <p class="text-xs text-gray-500 mb-3">ログインしたことがある全ユーザーの一覧です（新しい順）。<br>管理者・主はニックネームを設定できます（一般ユーザーには表示されません）。</p>
+      <input type="text" id="userSearchInput" class="user-search-input" placeholder="🔍 メールアドレスまたはニックネームで検索...">
+      <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
         <p class="text-xs text-gray-600">合計: <span id="userCountLabel" class="font-bold">0</span> 人</p>
-        <label class="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
-          <input type="checkbox" id="userShowOnlyNotBanned">
-          <span>BANされていない人のみ</span>
-        </label>
+        <div class="flex items-center gap-3 flex-wrap">
+          <label class="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+            <input type="checkbox" id="userShowOnlyNotBanned">
+            <span>BANされていない人のみ</span>
+          </label>
+          <label class="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+            <input type="checkbox" id="userShowOnlyNicknamed">
+            <span>ニックネーム設定済みのみ</span>
+          </label>
+        </div>
       </div>
       <div id="userListContainer" style="max-height: 55vh; overflow-y: auto;">
         <p class="text-xs text-gray-400">（読み込み中...）</p>
@@ -785,7 +865,26 @@
     </div>
   </div>
 
-  <!-- 承認待ちリストモーダル -->
+  <div id="nicknameModal" class="modal-backdrop hidden">
+    <div class="modal-content" style="max-width: 480px;">
+      <h3 class="text-lg font-bold text-gray-800 mb-1">✏️ ニックネーム設定</h3>
+      <p class="text-xs text-gray-500 mb-4">
+        対象: <span id="nicknameTargetEmail" class="admin-email"></span>
+      </p>
+      <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 mb-3">
+        ⚠️ ニックネームは管理者・主のみが閲覧できます。一般ユーザーには表示されません。
+      </p>
+      <label class="block text-xs text-gray-600 mb-1">ニックネーム（最大20文字）:</label>
+      <input type="text" id="nicknameInput" maxlength="20" placeholder="例: 常連さん / 要注意人物"
+        class="w-full border p-2 rounded text-sm mb-3 focus:ring-2 focus:ring-blue-300 outline-none">
+      <div class="flex justify-end gap-2 flex-wrap">
+        <button id="nicknameCancelBtn" class="reply-cancel-btn">キャンセル</button>
+        <button id="nicknameDeleteBtn" class="delete-btn">削除</button>
+        <button id="nicknameSaveBtn" class="bg-blue-700 hover:bg-blue-800 text-white text-xs py-1.5 px-4 rounded font-bold">保存</button>
+      </div>
+    </div>
+  </div>
+
   <div id="pendingModal" class="modal-backdrop hidden">
     <div class="modal-content" style="max-width: 640px;">
       <h3 class="text-lg font-bold text-gray-800 mb-1">🔔 承認待ちユーザー</h3>
@@ -802,7 +901,6 @@
     </div>
   </div>
 
-  <!-- ログイン画面 -->
   <div id="loginView" class="hidden">
     <div class="bg-white border border-gray-300 rounded-lg shadow p-8 max-w-md mx-auto mt-16 text-center">
       <h1 class="text-3xl font-bold text-red-900 mb-2">シクナイちゃんねる</h1>
@@ -823,7 +921,6 @@
     </div>
   </div>
 
-  <!-- メイン画面 -->
   <div id="mainView" class="hidden">
     <header class="border-b-2 border-red-800 pb-2 mb-4 flex justify-between items-center flex-wrap gap-2">
       <div>
@@ -844,21 +941,21 @@
       </div>
       <div class="flex items-center gap-2 flex-wrap">
         <div id="adminControls" class="hidden flex gap-2 flex-wrap">
-          <button id="pendingBtn" class="pending-btn" onclick="openPendingModal()">🔔 承認待ち <span id="pendingBadgeCount">0</span></button>
-          <button id="backupBtn" class="backup-btn" onclick="doBackup()">💾 バックアップ</button>
-          <button id="restoreBtn" class="restore-btn" onclick="document.getElementById('restoreInput').click()">📥 復元</button>
-          <button id="banListBtn" class="banlist-btn" onclick="openBanModal()">🚫 BAN管理</button>
-          <button id="userListBtn" class="userlist-btn" onclick="openUserModal()">👥 ユーザー一覧</button>
-          <button id="publishBtn" class="publish-btn" onclick="openPublishModal()">🌐 公開設定</button>
+          <button id="pendingBtn" class="pending-btn hidden" onclick="openPendingModal()">🔔 承認待ち <span id="pendingBadgeCount">0</span></button>
+          <button id="backupBtn" class="backup-btn hidden" onclick="doBackup()">💾 バックアップ</button>
+          <button id="restoreBtn" class="restore-btn hidden" onclick="document.getElementById('restoreInput').click()">📥 復元</button>
+          <button id="banListBtn" class="banlist-btn hidden" onclick="openBanModal()">🚫 BAN管理</button>
+          <button id="userListBtn" class="userlist-btn hidden" onclick="openUserModal()">👥 ユーザー一覧</button>
+          <button id="publishBtn" class="publish-btn hidden" onclick="openPublishModal()">🌐 公開設定</button>
           <input type="file" id="restoreInput" accept="application/json,.json" class="hidden">
         </div>
+        <button id="boardBtn" class="board-publish-btn" onclick="showBoardView()">📋 掲示板</button>
         <span id="userEmail" class="text-xs text-gray-500 hidden"></span>
         <button id="logoutBtn" onclick="doLogout()" class="bg-gray-500 hover:bg-gray-600 text-white text-xs py-1.5 px-3 rounded transition shadow">ログアウト</button>
         <button id="backToListBtn" onclick="showThreadList()" class="hidden bg-gray-600 hover:bg-gray-700 text-white text-xs py-1.5 px-3 rounded transition shadow">← スレッド一覧に戻る</button>
       </div>
     </header>
 
-    <!-- View 1: スレッド一覧 -->
     <div id="threadListView">
       <section class="bg-amber-50 border border-amber-200 p-4 rounded mb-6 shadow-sm">
         <h2 class="text-lg font-bold text-gray-700 mb-2">新規スレッド作成</h2>
@@ -885,7 +982,6 @@
       </main>
     </div>
 
-    <!-- View 2: スレッド詳細 -->
     <div id="threadDetailView" class="hidden">
       <div class="bg-white p-4 border border-gray-300 rounded mb-4 shadow-sm flex justify-between items-start gap-3 flex-wrap">
         <div class="flex-1 min-w-0">
@@ -921,10 +1017,48 @@
         </div>
       </main>
     </div>
+
+    <div id="boardView" class="hidden">
+      <div class="flex justify-between items-center border-b pb-2 mb-4">
+        <h2 class="text-xl font-bold text-gray-700">📋 掲示板</h2>
+        <button onclick="showThreadList()" class="bg-gray-600 hover:bg-gray-700 text-white text-xs py-1.5 px-3 rounded transition shadow">← スレッド一覧に戻る</button>
+      </div>
+
+      <div id="boardReadonlyNote" class="board-readonly-note hidden">
+        📖 掲示板は閲覧のみ可能です。投稿・編集は管理者または主、および掲示板管理権限を持つユーザーのみ行えます。
+      </div>
+
+      <div id="boardFormWrapper" class="board-form-box">
+        <h3 class="text-md font-bold text-gray-700 mb-2">✏️ 新しいお知らせ・イベント投稿</h3>
+        <form id="boardForm" class="space-y-3">
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">タイトル（必須）:</label>
+            <input type="text" id="boardTitle" maxlength="100" placeholder="例: 夏休みイベントのお知らせ" class="w-full border p-2 rounded text-sm focus:ring-2 focus:ring-amber-300 outline-none" required>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">本文（任意）:</label>
+            <textarea id="boardContent" rows="4" maxlength="3000" placeholder="イベントの詳細などを入力..." class="w-full border p-2 rounded text-sm focus:ring-2 focus:ring-amber-300 outline-none"></textarea>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">画像を添付（任意・自動リサイズ）:</label>
+            <input type="file" id="boardFileInput" accept="image/*" class="text-xs text-gray-600 w-full">
+            <div class="preview-box" id="boardPreviewBox">
+              <img id="boardPreviewImg" alt="プレビュー">
+              <div class="preview-info" id="boardPreviewInfo"></div>
+            </div>
+          </div>
+          <button type="submit" id="boardSubmitBtn" class="board-publish-btn">📢 掲示板に投稿する</button>
+        </form>
+      </div>
+
+      <div id="boardListContainer">
+        <p class="text-gray-500 text-sm"><span class="loading-spinner"></span> 掲示板を読み込み中...</p>
+      </div>
+    </div>
+
   </div>
 
   <script type="module">
-    /* ===== モジュールインポート（Firebase） ===== */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
     import {
@@ -936,7 +1070,6 @@
       setPersistence, browserLocalPersistence
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-    /* ===== Firebase 設定 ===== */
     const firebaseConfig = {
       apiKey: "AIzaSyBCoiJAnVWIOH9csEPlDyWJgfj6sSlNO2o",
       authDomain: "chaneler-52b95.firebaseapp.com",
@@ -958,7 +1091,6 @@
       console.warn('永続化設定失敗:', err);
     });
 
-    /* ===== ロール定義 ===== */
     const ROLE_ADMIN_EMAIL = "katou.noel114514@gmail.com";
     const ROLE_OWNER_EMAIL = "18107@v.nakijin.ed.jp";
     const ROLE_VIP_EMAILS = [
@@ -969,7 +1101,7 @@
 
     const IMAGE_MAX_WIDTH = 1280;
     const IMAGE_QUALITY = 0.75;
-    const IMAGE_MAX_BASE64_SIZE = 200 * 1024; // 200KB
+    const IMAGE_MAX_BASE64_SIZE = 200 * 1024;
 
     let currentUser = null;
     let userRole = null;
@@ -985,6 +1117,8 @@
     let approvedUnsubscribe = null;
     let selfApprovalUnsubscribe = null;
     let siteStatusUnsubscribe = null;
+    let boardUnsubscribe = null;
+    let nicknamesUnsubscribe = null;
 
     let activeReplyParentId = null;
     let allPostsCache = [];
@@ -998,6 +1132,7 @@
     let approvedCache = {};
     let siteStatusCache = { published: true, messageUrl: '' };
     let myFingerprint = null;
+    let nicknamesCache = {};
 
     let badgeEditingTarget = null;
     let badgeEditingBadgeId = null;
@@ -1010,15 +1145,15 @@
 
     let initialAuthCheckDone = false;
 
-    /* ===== 権限キャッシュ（バッジ機能） ===== */
-    // 形式: { uid: { featureName: true } }
+    let boardCache = {};
+
     let badgeFeaturePermissions = {};
 
-    /* ===== DOM 取得 ===== */
     const loginView = document.getElementById('loginView');
     const mainView = document.getElementById('mainView');
     const threadListView = document.getElementById('threadListView');
     const threadDetailView = document.getElementById('threadDetailView');
+    const boardView = document.getElementById('boardView');
     const backToListBtn = document.getElementById('backToListBtn');
     const threadsContainer = document.getElementById('threadsContainer');
     const postsContainer = document.getElementById('postsContainer');
@@ -1043,43 +1178,52 @@
     const publishBtn = document.getElementById('publishBtn');
     let bannerTimer = null;
 
-    /* ===== 権限ヘルパー（基本ロール） ===== */
     function canDelete() {
       return userRole === 'admin' || userRole === 'owner' || userRole === 'vip';
     }
     function canBackup() {
-      return userRole === 'admin' || userRole === 'owner';
+      if (userRole === 'admin' || userRole === 'owner') return true;
+      return canDo('canBackup');
     }
     function canViewEmail() {
-      if (userRole !== 'admin' && userRole !== 'owner') return false;
+      if (userRole !== 'admin' && userRole !== 'owner') {
+        if (!canDo('canViewEmail')) return false;
+      }
       return myEmailVisible === true;
     }
     function canManageBadge() {
-      return userRole === 'admin' || userRole === 'owner';
+      if (userRole === 'admin' || userRole === 'owner') return true;
+      return canDo('canManageBadge');
     }
     function canBan() {
-      return userRole === 'admin' || userRole === 'owner';
+      if (userRole === 'admin' || userRole === 'owner') return true;
+      return canDo('canBan');
     }
     function canApprove() {
-      return userRole === 'admin' || userRole === 'owner';
+      if (userRole === 'admin' || userRole === 'owner') return true;
+      return canDo('canApprove');
     }
     function canPublish() {
+      if (userRole === 'admin' || userRole === 'owner') return true;
+      return canDo('canPublish');
+    }
+    function canManageBoard() {
+      if (userRole === 'admin' || userRole === 'owner') return true;
+      if (currentUser && currentUser.uid && hasBadgeFeature(currentUser.uid, 'canManageBoard')) return true;
+      return false;
+    }
+    function canSetNickname() {
       return userRole === 'admin' || userRole === 'owner';
     }
 
-    /* ===== バッジ機能権限チェック ===== */
     function hasBadgeFeature(uid, feature) {
       if (!uid || !feature) return false;
       return !!(badgeFeaturePermissions[uid] && badgeFeaturePermissions[uid][feature]);
     }
 
-    // 現在のユーザーが指定機能を持っているか（ロール + バッジ機能を統合）
     function canDo(feature) {
-      // 管理者・主は全機能OK
       if (userRole === 'admin' || userRole === 'owner') return true;
-      // VIPは基本削除のみ（既存のcanDeleteに準ずる）
       if (userRole === 'vip' && (feature === 'canDeletePost' || feature === 'canDeleteThread')) return true;
-      // バッジ機能をチェック
       if (currentUser && currentUser.uid) {
         if (hasBadgeFeature(currentUser.uid, feature)) return true;
       }
@@ -1483,9 +1627,6 @@
       });
     })();
 
-    /* ============================================================
-       ★★★ 右クリック禁止 & ショートカットキー禁止 ★★★
-       ============================================================ */
     document.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       return false;
@@ -1548,9 +1689,6 @@
       }
     });
 
-    /* ============================================================
-       バッジ機能権限の監視とキャッシュ
-       ============================================================ */
     let badgeFeatureUnsubscribe = null;
 
     function initBadgeFeatureListener() {
@@ -1559,34 +1697,226 @@
       badgeFeatureUnsubscribe = onValue(featureRef, (snap) => {
         badgeFeaturePermissions = snap.exists() ? snap.val() : {};
         console.log('バッジ機能権限更新:', badgeFeaturePermissions);
-        // 再描画
         if (currentThreadKey) renderPostsFromCache();
-        // 管理ボタンの表示更新
         updateAdminControlsVisibility();
+        updateBoardEditability();
+        updateMyBadgeToggleVisibility();
       }, (err) => {
         console.error('バッジ機能権限監視エラー:', err);
       });
     }
 
-    // 管理ボタン表示を動的に更新
-    function updateAdminControlsVisibility() {
-      // 管理者・主は強制表示
-      if (userRole === 'admin' || userRole === 'owner') {
-        adminControls.classList.remove('hidden');
-        return;
+    function initNicknamesListener() {
+      if (nicknamesUnsubscribe) nicknamesUnsubscribe();
+      const ref0 = ref(db, 'nicknames');
+      nicknamesUnsubscribe = onValue(ref0, (snap) => {
+        nicknamesCache = snap.exists() ? snap.val() : {};
+        const um = document.getElementById('userModal');
+        if (um && !um.classList.contains('hidden')) {
+          renderUserList();
+        }
+      }, (err) => {
+        console.error('ニックネーム監視エラー:', err);
+      });
+    }
+
+    function updateMyBadgeToggleVisibility() {
+      if (!currentUser) return;
+      const hasCustomBadge = currentUser.uid && customBadgesCache[currentUser.uid] &&
+                             Object.keys(customBadgesCache[currentUser.uid]).length > 0;
+      if (userRole === 'admin' || userRole === 'owner' || userRole === 'vip' || hasCustomBadge) {
+        badgeToggleWrap.classList.remove('hidden');
+        badgeToggle.checked = myBadgePublic;
+      } else {
+        badgeToggleWrap.classList.add('hidden');
       }
-      // バッジ機能で何らかの権限を持っているか
-      const anyFeature = ['canBackup','canBan','canApprove','canPublish','canManageBadge'].some(f =>
-        canDo(f)
-      );
-      if (anyFeature) {
+    }
+
+    function updateBoardEditability() {
+      const formWrapper = document.getElementById('boardFormWrapper');
+      const readonlyNote = document.getElementById('boardReadonlyNote');
+      if (!formWrapper || !readonlyNote) return;
+      if (canManageBoard()) {
+        formWrapper.classList.remove('hidden');
+        readonlyNote.classList.add('hidden');
+      } else {
+        formWrapper.classList.add('hidden');
+        readonlyNote.classList.remove('hidden');
+      }
+    }
+
+    function updateAdminControlsVisibility() {
+      if (!currentUser) return;
+
+      const pendingBtn = document.getElementById('pendingBtn');
+      const backupBtn = document.getElementById('backupBtn');
+      const restoreBtn = document.getElementById('restoreBtn');
+      const banListBtn = document.getElementById('banListBtn');
+      const userListBtn = document.getElementById('userListBtn');
+      const publishBtn = document.getElementById('publishBtn');
+
+      const showPending = canApprove();
+      const showBackup = canBackup();
+      const showBan = canBan();
+      const showPublish = canPublish();
+
+      if (showPending) pendingBtn.classList.remove('hidden');
+      else pendingBtn.classList.add('hidden');
+
+      if (showBackup) {
+        backupBtn.classList.remove('hidden');
+        restoreBtn.classList.remove('hidden');
+      } else {
+        backupBtn.classList.add('hidden');
+        restoreBtn.classList.add('hidden');
+      }
+
+      if (showBan) {
+        banListBtn.classList.remove('hidden');
+        userListBtn.classList.remove('hidden');
+      } else {
+        banListBtn.classList.add('hidden');
+        userListBtn.classList.add('hidden');
+      }
+
+      if (showPublish) publishBtn.classList.remove('hidden');
+      else publishBtn.classList.add('hidden');
+
+      const anyVisible = showPending || showBackup || showBan || showPublish;
+      if (anyVisible) {
         adminControls.classList.remove('hidden');
       } else {
         adminControls.classList.add('hidden');
       }
     }
 
-    /* ===== 以降、既存のFirebase処理 ===== */
+    function initBoardListener() {
+      if (boardUnsubscribe) boardUnsubscribe();
+      const boardRef = ref(db, 'board');
+      boardUnsubscribe = onValue(boardRef, (snap) => {
+        boardCache = snap.exists() ? snap.val() : {};
+        if (!boardView.classList.contains('hidden')) {
+          renderBoardList();
+        }
+      }, (err) => {
+        console.error('掲示板監視エラー:', err);
+      });
+    }
+
+    function renderBoardList() {
+      const container = document.getElementById('boardListContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const entries = Object.entries(boardCache || {});
+      if (entries.length === 0) {
+        container.innerHTML = '<p class="text-gray-400 text-sm">まだ投稿がありません。</p>';
+        return;
+      }
+
+      entries.sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0));
+
+      entries.forEach(([key, item]) => {
+        if (!item) return;
+        const date = item.createdAt ? new Date(item.createdAt).toLocaleString('ja-JP') : '不明';
+        const card = document.createElement('div');
+        card.className = 'board-card';
+        const canEdit = canManageBoard();
+        card.innerHTML = `
+          <div class="flex justify-between items-start gap-2">
+            <div>
+              <div class="board-title">${escapeHtml(item.title || '（無題）')}</div>
+              <div class="board-meta">${date} ／ ${escapeHtml(item.authorEmail || '不明')}</div>
+            </div>
+            ${canEdit ? `<button class="board-delete-btn" data-key="${key}">削除</button>` : ''}
+          </div>
+          ${item.content ? `<div class="board-body">${formatContent(item.content)}</div>` : ''}
+          ${item.file ? `<div class="board-img">${buildFileHtml(item.file)}</div>` : ''}
+        `;
+        const delBtn = card.querySelector('.board-delete-btn');
+        if (delBtn) {
+          delBtn.addEventListener('click', async () => {
+            if (!canManageBoard()) {
+              alert('掲示板管理権限がありません。');
+              return;
+            }
+            if (!confirm('この投稿を削除しますか？')) return;
+            try {
+              await remove(ref(db, `board/${key}`));
+              showBanner('掲示板投稿を削除しました', false);
+            } catch (err) {
+              console.error('掲示板削除エラー:', err);
+              showBanner('削除失敗: ' + (err.code || err.message), true);
+            }
+          });
+        }
+        container.appendChild(card);
+      });
+    }
+
+    window.showBoardView = function() {
+      threadListView.classList.add('hidden');
+      threadDetailView.classList.add('hidden');
+      boardView.classList.remove('hidden');
+      backToListBtn.classList.remove('hidden');
+      currentThreadKey = null;
+      if (postsUnsubscribe) { postsUnsubscribe(); postsUnsubscribe = null; }
+      postsContainer.innerHTML = '';
+      updateBoardEditability();
+      initBoardListener();
+      renderBoardList();
+    };
+
+    document.getElementById('boardForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentUser) { alert('ログインが必要です。'); return; }
+      if (!canManageBoard()) {
+        alert('掲示板管理権限がありません。');
+        return;
+      }
+
+      const title = document.getElementById('boardTitle').value.trim();
+      const content = document.getElementById('boardContent').value.trim();
+      const fileInput = document.getElementById('boardFileInput');
+      const file = fileInput.files[0];
+      const btn = document.getElementById('boardSubmitBtn');
+
+      if (!title) { alert('タイトルを入力してください。'); return; }
+
+      btn.disabled = true;
+      btn.textContent = file ? '画像処理中...' : '投稿中...';
+
+      try {
+        let fileData = null;
+        if (file) fileData = await fileToBase64Image(file);
+
+        const boardRef = ref(db, 'board');
+        const newRef = push(boardRef);
+        await set(newRef, {
+          title: title,
+          content: content || '',
+          file: fileData,
+          authorEmail: currentUser.email,
+          authorUid: currentUser.uid,
+          createdAt: Date.now()
+        });
+
+        document.getElementById('boardForm').reset();
+        document.getElementById('boardPreviewBox').classList.remove('show');
+        showBanner('掲示板に投稿しました', false);
+      } catch (err) {
+        console.error('掲示板投稿エラー:', err);
+        showBanner('投稿失敗: ' + (err.code || err.message), true);
+        alert('投稿に失敗しました。\n' + (err.message || ''));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '📢 掲示板に投稿する';
+      }
+    });
+
+    document.getElementById('boardFileInput').addEventListener('change', () => {
+      updatePreview(document.getElementById('boardFileInput'), 'boardPreviewBox', 'boardPreviewImg', 'boardPreviewInfo');
+    });
 
     document.getElementById('switchAccountBtn').addEventListener('click', async () => {
       intentionalSignOut = true;
@@ -1640,6 +1970,8 @@
       if (selfApprovalUnsubscribe) { selfApprovalUnsubscribe(); selfApprovalUnsubscribe = null; }
       if (siteStatusUnsubscribe) { siteStatusUnsubscribe(); siteStatusUnsubscribe = null; }
       if (badgeFeatureUnsubscribe) { badgeFeatureUnsubscribe(); badgeFeatureUnsubscribe = null; }
+      if (boardUnsubscribe) { boardUnsubscribe(); boardUnsubscribe = null; }
+      if (nicknamesUnsubscribe) { nicknamesUnsubscribe(); nicknamesUnsubscribe = null; }
       try { await signOut(auth); } catch (e) { console.error(e); }
       banOverlay.classList.remove('show');
       hideUnpublishedOverlay();
@@ -1691,6 +2023,8 @@
       badgesUnsubscribe = onValue(badgesRef, (snap) => {
         customBadgesCache = snap.exists() ? snap.val() : {};
         if (currentThreadKey) renderPostsFromCache();
+        updateMyBadgeToggleVisibility();
+        updateAdminControlsVisibility();
       }, (err) => {
         console.error('カスタムバッジ監視エラー:', err);
       });
@@ -1848,7 +2182,7 @@
       myFingerprint = generateFingerprint();
 
       initSiteStatusListener();
-      initBadgeFeatureListener(); // バッジ機能権限を監視
+      initBadgeFeatureListener();
 
       if (isCurrentUserProtected()) {
         console.log('管理者/主のためBAN関連チェックを全スキップ:', user.email);
@@ -1887,14 +2221,9 @@
 
       userApproved = true;
 
-      if (userRole === 'admin' || userRole === 'owner' || userRole === 'vip') {
-        badgeToggleWrap.classList.remove('hidden');
-        badgeToggle.checked = myBadgePublic;
-      } else {
-        badgeToggleWrap.classList.add('hidden');
-      }
+      updateMyBadgeToggleVisibility();
 
-      if (canManageBadge()) {
+      if (canViewEmail()) {
         emailToggleWrap.classList.remove('hidden');
         emailToggle.checked = myEmailVisible;
       } else {
@@ -1919,7 +2248,9 @@
         userEmailSpan.className = 'text-xs text-purple-700 font-bold';
       }
 
-      updateAdminControlsVisibility(); // 動的表示
+      updateAdminControlsVisibility();
+      updateBoardEditability();
+      setTimeout(updateAdminControlsVisibility, 500);
 
       if (selfApprovalUnsubscribe) selfApprovalUnsubscribe();
       selfApprovalUnsubscribe = onValue(ref(db, `approvedUsers/${user.uid}`), (snap) => {
@@ -1940,7 +2271,9 @@
       initCustomBadgesListener();
       initKnownUsersListener();
       initPendingListener();
+      initNicknamesListener();
       registerMyFingerprint();
+      initBoardListener();
     });
 
     badgeToggle.addEventListener('change', async () => {
@@ -2014,6 +2347,7 @@
     window.showThreadList = function() {
       threadListView.classList.remove('hidden');
       threadDetailView.classList.add('hidden');
+      boardView.classList.add('hidden');
       backToListBtn.classList.add('hidden');
       currentThreadKey = null;
       currentThreadOwnerUid = null;
@@ -2042,6 +2376,7 @@
 
       threadListView.classList.add('hidden');
       threadDetailView.classList.remove('hidden');
+      boardView.classList.add('hidden');
       backToListBtn.classList.remove('hidden');
 
       loadPosts(threadKey);
@@ -2681,6 +3016,7 @@
     const userSearchInput = document.getElementById('userSearchInput');
     const userCountLabel = document.getElementById('userCountLabel');
     const userShowOnlyNotBanned = document.getElementById('userShowOnlyNotBanned');
+    const userShowOnlyNicknamed = document.getElementById('userShowOnlyNicknamed');
 
     window.openUserModal = function() {
       if (!canBan()) { alert('ユーザー一覧の閲覧権限がありません。'); return; }
@@ -2698,11 +3034,13 @@
     });
     userSearchInput.addEventListener('input', renderUserList);
     userShowOnlyNotBanned.addEventListener('change', renderUserList);
+    if (userShowOnlyNicknamed) userShowOnlyNicknamed.addEventListener('change', renderUserList);
 
     function renderUserList() {
       userListContainer.innerHTML = '';
       const keyword = (userSearchInput.value || '').trim().toLowerCase();
       const onlyNotBanned = userShowOnlyNotBanned.checked;
+      const onlyNicknamed = userShowOnlyNicknamed ? userShowOnlyNicknamed.checked : false;
 
       const list = Object.entries(knownUsersCache || {}).map(([uid, u]) => ({
         uid,
@@ -2714,12 +3052,30 @@
         lastFingerprint: (u && u.lastFingerprint) || ''
       }));
 
+      Object.entries(approvedCache || {}).forEach(([uid, u]) => {
+        if (!list.find(x => x.uid === uid)) {
+          list.push({
+            uid,
+            email: (u && u.email) || '',
+            displayName: (u && u.displayName) || '',
+            lastSeen: (u && u.approvedAt) || 0,
+            firstSeen: (u && u.approvedAt) || 0,
+            role: roleFromEmail(u && u.email),
+            lastFingerprint: ''
+          });
+        }
+      });
+
       let filtered = list;
       if (keyword) {
-        filtered = filtered.filter(u =>
-          u.email.toLowerCase().includes(keyword) ||
-          u.uid.toLowerCase().includes(keyword)
-        );
+        filtered = filtered.filter(u => {
+          const nick = nicknamesCache[u.uid] && nicknamesCache[u.uid].nickname
+            ? nicknamesCache[u.uid].nickname.toLowerCase()
+            : '';
+          return u.email.toLowerCase().includes(keyword) ||
+                 u.uid.toLowerCase().includes(keyword) ||
+                 nick.includes(keyword);
+        });
       }
       if (onlyNotBanned) {
         filtered = filtered.filter(u => {
@@ -2727,6 +3083,12 @@
           const ek = emailToKey(u.email);
           if (ek && bansCache[ek]) return false;
           return true;
+        });
+      }
+      if (onlyNicknamed) {
+        filtered = filtered.filter(u => {
+          const n = nicknamesCache[u.uid];
+          return n && n.nickname && n.nickname.length > 0;
         });
       }
 
@@ -2757,17 +3119,29 @@
         else if (u.role === 'vip') roleTag = '<span class="role-tag vip">VIP</span>';
         if (isBanned) roleTag += ' <span class="role-tag banned">BAN中</span>';
 
+        const nicknameData = nicknamesCache[u.uid];
+        const nickname = nicknameData && nicknameData.nickname ? nicknameData.nickname : '';
+
+        let nicknameHtml = '';
+        if (canSetNickname()) {
+          nicknameHtml = nickname
+            ? `<div class="nickname-line">🏷️ ニックネーム: <span class="nickname-value">${escapeHtml(nickname)}</span></div>`
+            : `<div class="nickname-line">🏷️ ニックネーム: <span class="nickname-empty">（未設定）</span></div>`;
+        }
+
         const row = document.createElement('div');
         row.className = 'user-row';
         row.innerHTML = `
           <div class="info">
             <div class="email-line">${escapeHtml(u.email || '（メール不明）')}</div>
+            ${nicknameHtml}
             <div class="meta-line">UID: ${escapeHtml(u.uid)}</div>
             <div class="meta-line">初回: ${escapeHtml(firstSeenDate)} ／ 最終: ${escapeHtml(lastSeenDate)}</div>
             <div class="meta-line">${roleTag}</div>
           </div>
           <div class="action-btns">
             <button class="btn-mini btn-copy" data-copy="${escapeHtml(u.email)}">📋 コピー</button>
+            ${canSetNickname() ? `<button class="btn-mini btn-nickname" data-nick-uid="${escapeHtml(u.uid)}" data-nick-email="${escapeHtml(u.email)}">🏷️ ニックネーム</button>` : ''}
             ${canBan() && !isProtected ? (
               isBanned
                 ? `<button class="btn-mini btn-unban" data-unban-uid="${escapeHtml(u.uid)}" data-unban-email="${escapeHtml(u.email)}">解除</button>`
@@ -2783,6 +3157,13 @@
             alert('コピーに失敗しました');
           });
         });
+
+        const nickBtn = row.querySelector('.btn-nickname');
+        if (nickBtn) {
+          nickBtn.addEventListener('click', () => {
+            window.openNicknameModal(nickBtn.dataset.nickUid, nickBtn.dataset.nickEmail);
+          });
+        }
 
         const banBtn = row.querySelector('.btn-ban');
         if (banBtn) {
@@ -2800,6 +3181,105 @@
         userListContainer.appendChild(row);
       });
     }
+
+    /* ===== ニックネーム管理 ===== */
+    let nicknameEditingUid = null;
+    let nicknameEditingEmail = '';
+
+    // window に登録（renderUserList から呼べるように）
+    window.openNicknameModal = function(uid, email) {
+      if (!canSetNickname()) { alert('ニックネーム設定権限がありません。'); return; }
+      if (!uid) { alert('UIDが取得できませんでした。'); return; }
+      nicknameEditingUid = uid;
+      nicknameEditingEmail = email || '';
+      const targetEl = document.getElementById('nicknameTargetEmail');
+      if (targetEl) targetEl.textContent = email || '（メール不明）';
+      const existing = nicknamesCache[uid];
+      const inputEl = document.getElementById('nicknameInput');
+      if (inputEl) inputEl.value = (existing && existing.nickname) || '';
+      document.getElementById('nicknameModal').classList.remove('hidden');
+      setTimeout(() => { if (inputEl) inputEl.focus(); }, 100);
+    };
+
+    function closeNicknameModal() {
+      nicknameEditingUid = null;
+      nicknameEditingEmail = '';
+      const m = document.getElementById('nicknameModal');
+      if (m) m.classList.add('hidden');
+    }
+
+    (function initNicknameModalEvents() {
+      const cancelBtn = document.getElementById('nicknameCancelBtn');
+      const modal = document.getElementById('nicknameModal');
+      const saveBtn = document.getElementById('nicknameSaveBtn');
+      const delBtn = document.getElementById('nicknameDeleteBtn');
+
+      if (cancelBtn) cancelBtn.addEventListener('click', closeNicknameModal);
+      if (modal) {
+        modal.addEventListener('click', (e) => {
+          if (e.target.id === 'nicknameModal') closeNicknameModal();
+        });
+      }
+
+      if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+          if (!canSetNickname()) { alert('ニックネーム設定権限がありません。'); return; }
+          if (!currentUser) { alert('ログインが必要です。'); return; }
+          if (!nicknameEditingUid) { alert('対象ユーザーが選択されていません。'); return; }
+          const nickname = (document.getElementById('nicknameInput').value || '').trim();
+          if (!nickname) { alert('ニックネームを入力してください。'); return; }
+          if (nickname.length > 20) { alert('ニックネームは20文字以内で入力してください。'); return; }
+
+          saveBtn.disabled = true;
+          const originalText = saveBtn.textContent;
+          saveBtn.textContent = '保存中...';
+
+          try {
+            await set(ref(db, `nicknames/${nicknameEditingUid}`), {
+              nickname: nickname,
+              email: nicknameEditingEmail,
+              updatedAt: Date.now(),
+              updatedBy: currentUser.email
+            });
+            showBanner('ニックネームを保存しました', false);
+            closeNicknameModal();
+          } catch (err) {
+            console.error('ニックネーム保存エラー:', err);
+            showBanner('保存失敗: ' + (err.code || err.message || '不明なエラー'), true);
+            alert('保存に失敗しました。\n' + (err.message || ''));
+          } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = originalText;
+          }
+        });
+      }
+
+      if (delBtn) {
+        delBtn.addEventListener('click', async () => {
+          if (!canSetNickname()) { alert('ニックネーム設定権限がありません。'); return; }
+          if (!currentUser) { alert('ログインが必要です。'); return; }
+          if (!nicknameEditingUid) return;
+          if (!confirm('このニックネームを削除しますか？')) return;
+
+          delBtn.disabled = true;
+          const originalText = delBtn.textContent;
+          delBtn.textContent = '削除中...';
+
+          try {
+            await remove(ref(db, `nicknames/${nicknameEditingUid}`));
+            showBanner('ニックネームを削除しました', false);
+            closeNicknameModal();
+          } catch (err) {
+            console.error('ニックネーム削除エラー:', err);
+            showBanner('削除失敗: ' + (err.code || err.message || '不明なエラー'), true);
+            alert('削除に失敗しました。\n' + (err.message || ''));
+          } finally {
+            delBtn.disabled = false;
+            delBtn.textContent = originalText;
+          }
+        });
+      }
+    })();
 
     const pendingModal = document.getElementById('pendingModal');
     const pendingListContainer = document.getElementById('pendingListContainer');
@@ -3017,7 +3497,7 @@
       }
     });
 
-    /* ===== バッジ管理（完全版・機能付き） ===== */
+    /* ===== バッジ管理 ===== */
 
     const COLOR_PRESETS = [
       '#7c2d12', '#dc2626', '#ea580c', '#d97706', '#ca8a04',
@@ -3079,7 +3559,6 @@
       Object.entries(badges).forEach(([bid, b]) => {
         if (!b || !b.label) return;
 
-        // 機能一覧を構築
         let featuresHtml = '';
         const features = b.features || {};
         const featureNames = {
@@ -3090,7 +3569,8 @@
           canPublish: '公開設定',
           canViewEmail: 'メール閲覧',
           canBackup: 'バックアップ',
-          canManageBadge: 'バッジ管理'
+          canManageBadge: 'バッジ管理',
+          canManageBoard: '掲示板管理'
         };
         Object.keys(featureNames).forEach(f => {
           if (features[f]) {
@@ -3114,8 +3594,7 @@
           if (!confirm(`バッジ「${b.label}」を削除しますか？`)) return;
           try {
             await remove(ref(db, `customBadges/${badgeEditingTarget.uid}/${bid}`));
-            // 機能権限も削除
-            await remove(ref(db, `badgeFeatures/${badgeEditingTarget.uid}`));
+            await updateBadgeFeaturesFromCustomBadges(badgeEditingTarget.uid);
             showBanner('バッジを削除しました', false);
           } catch (err) {
             console.error('削除エラー:', err);
@@ -3133,7 +3612,6 @@
       const colorPicker = document.getElementById('badgeColorPicker');
       const colorText = document.getElementById('badgeColorText');
 
-      // 機能チェックボックスをリセット
       document.querySelectorAll('.badge-feature-checkbox').forEach(cb => cb.checked = false);
 
       if (badgeId && customBadgesCache[badgeEditingTarget.uid]?.[badgeId]) {
@@ -3143,7 +3621,6 @@
         colorPicker.value = b.color || '#ef4444';
         colorText.value = b.color || '#ef4444';
 
-        // 機能を復元
         if (b.features) {
           document.querySelectorAll('.badge-feature-checkbox').forEach(cb => {
             cb.checked = !!b.features[cb.value];
@@ -3210,7 +3687,6 @@
       if (!label) { alert('バッジ名を入力してください。'); return; }
       if (!/^#[0-9a-fA-F]{6}$/.test(color)) { alert('色は #RRGGBB の形式で入力してください。'); return; }
 
-      // 機能を収集
       const features = {};
       document.querySelectorAll('.badge-feature-checkbox:checked').forEach(cb => {
         features[cb.value] = true;
@@ -3235,11 +3711,7 @@
           showBanner('バッジを追加しました', false);
         }
 
-        // 機能権限を別ノードに保存（バッジの集約）
-        // 複数バッジがある場合、機能をマージ（OR）
-        // 再帰的にcustomBadgesから再計算
         await updateBadgeFeaturesFromCustomBadges(uid);
-
         closeBadgeEditor();
       } catch (err) {
         console.error('バッジ保存エラー:', err);
@@ -3248,7 +3720,6 @@
       }
     });
 
-    // ユーザーのバッジ機能を再計算して保存
     async function updateBadgeFeaturesFromCustomBadges(uid) {
       try {
         const snap = await get(ref(db, `customBadges/${uid}`));
@@ -3550,6 +4021,8 @@
         const snapPending = await get(ref(db, 'pendingUsers'));
         const snapSite = await get(ref(db, 'siteStatus'));
         const snapFeatures = await get(ref(db, 'badgeFeatures'));
+        const snapBoard = await get(ref(db, 'board'));
+        const snapNicknames = await get(ref(db, 'nicknames'));
         const payload = {
           _meta: {
             exportedAt: new Date().toISOString(),
@@ -3564,7 +4037,9 @@
           approvedUsers: snapApproved.exists() ? snapApproved.val() : {},
           pendingUsers: snapPending.exists() ? snapPending.val() : {},
           siteStatus: snapSite.exists() ? snapSite.val() : {},
-          badgeFeatures: snapFeatures.exists() ? snapFeatures.val() : {}
+          badgeFeatures: snapFeatures.exists() ? snapFeatures.val() : {},
+          board: snapBoard.exists() ? snapBoard.val() : {},
+          nicknames: snapNicknames.exists() ? snapNicknames.val() : {}
         };
         const json = JSON.stringify(payload, null, 2);
         const blob = new Blob([json], { type: 'application/json' });
@@ -3618,6 +4093,8 @@
         let pendingData = {};
         let siteStatusData = {};
         let badgeFeaturesData = {};
+        let boardData = {};
+        let nicknamesData = {};
 
         if (parsed && typeof parsed === 'object' && parsed.threads && typeof parsed.threads === 'object') {
           threadsData = parsed.threads;
@@ -3629,6 +4106,8 @@
           if (parsed.pendingUsers && typeof parsed.pendingUsers === 'object') pendingData = parsed.pendingUsers;
           if (parsed.siteStatus && typeof parsed.siteStatus === 'object') siteStatusData = parsed.siteStatus;
           if (parsed.badgeFeatures && typeof parsed.badgeFeatures === 'object') badgeFeaturesData = parsed.badgeFeatures;
+          if (parsed.board && typeof parsed.board === 'object') boardData = parsed.board;
+          if (parsed.nicknames && typeof parsed.nicknames === 'object') nicknamesData = parsed.nicknames;
         } else if (parsed && typeof parsed === 'object') {
           threadsData = parsed;
         } else {
@@ -3667,6 +4146,8 @@
         await set(ref(db, 'approvedUsers'), approvedData);
         await set(ref(db, 'pendingUsers'), pendingData);
         await set(ref(db, 'badgeFeatures'), badgeFeaturesData);
+        await set(ref(db, 'board'), boardData);
+        await set(ref(db, 'nicknames'), nicknamesData);
         if (Object.keys(siteStatusData).length > 0) {
           await set(ref(db, 'siteStatus'), siteStatusData);
         }
@@ -3693,6 +4174,8 @@
       if (selfApprovalUnsubscribe) selfApprovalUnsubscribe();
       if (siteStatusUnsubscribe) siteStatusUnsubscribe();
       if (badgeFeatureUnsubscribe) badgeFeatureUnsubscribe();
+      if (boardUnsubscribe) boardUnsubscribe();
+      if (nicknamesUnsubscribe) nicknamesUnsubscribe();
     });
     window.addEventListener('unhandledrejection', (event) => {
       console.error('未処理のPromiseエラー:', event.reason);
